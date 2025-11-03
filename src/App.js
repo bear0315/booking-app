@@ -38,7 +38,7 @@ const App = () => {
           } />
 
           {/* Chi tiết tour */}
-          <Route path="/tour/:id" element={
+          <Route path="/tour" element={
             <>
               <Header />
               <main className="pt-[80px]">
