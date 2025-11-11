@@ -39,10 +39,17 @@ const LoginPage = () => {
       setIsLoading(true);
       try {
         const result = await login(formData.email, formData.password);
-        if (result.success) {
-          // Get role from multiple possible sources
+        
+        // Handle both lowercase and PascalCase response formats
+        const success = result.success || result.Success || false;
+        
+        if (success) {
+          // Get role from multiple possible sources (handle both cases)
           const userRole = result.user?.role || 
+                          result.user?.Role ||
                           result.data?.user?.role || 
+                          result.data?.User?.role ||
+                          result.data?.User?.Role ||
                           result.data?.data?.role ||
                           result.data?.role;
           
@@ -59,9 +66,12 @@ const LoginPage = () => {
             navigate('/');
           }
         } else {
-          setError(result.message || 'Đăng nhập thất bại');
+          const errorMessage = result.message || result.Message || 'Đăng nhập thất bại';
+          setError(errorMessage);
+          console.error('Login failed:', errorMessage);
         }
       } catch (err) {
+        console.error('Login error:', err);
         setError(err.message || 'Đã xảy ra lỗi khi đăng nhập');
       } finally {
         setIsLoading(false);

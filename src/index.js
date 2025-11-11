@@ -4,6 +4,23 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Suppress WebSocket connection errors from browser extensions
+if (typeof window !== 'undefined') {
+  const originalError = console.error;
+  console.error = (...args) => {
+    // Filter out WebSocket connection errors from extensions
+    if (
+      args[0]?.includes?.('WebSocket') ||
+      args[0]?.includes?.('ws://') ||
+      args[0]?.includes?.('ERR_CONNECTION_REFUSED')
+    ) {
+      // Silently ignore WebSocket errors from extensions
+      return;
+    }
+    originalError.apply(console, args);
+  };
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>

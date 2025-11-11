@@ -55,12 +55,33 @@ const CheckoutPage = () => {
     }
 
     // Get tour data from location state or URL params
-    const tourId = new URLSearchParams(location.search).get('tourId') || location.state?.tourData?.id;
+    const tourId = new URLSearchParams(location.search).get('tourId') || 
+                   location.state?.tourData?.id || 
+                   location.state?.tourData?.Id;
+    
+    // Get booking data from location state (date, guests)
+    if (location.state?.tourData) {
+      const stateData = location.state.tourData;
+      if (stateData.date) {
+        setBookingData(prev => ({
+          ...prev,
+          tourDate: stateData.date
+        }));
+      }
+      if (stateData.guests) {
+        setBookingData(prev => ({
+          ...prev,
+          numberOfGuests: stateData.guests
+        }));
+      }
+    }
     
     if (tourId) {
       fetchTourData(tourId);
     } else if (location.state?.tourData) {
-      setTourData(location.state.tourData);
+      // Use tour data from state if available
+      const stateTourData = location.state.tourData;
+      setTourData(stateTourData);
       setLoading(false);
     } else {
       navigate('/tours');
@@ -68,23 +89,36 @@ const CheckoutPage = () => {
 
     // Pre-fill user data if available
     if (user) {
+      const userName = user.name || user.fullName || user.Name || user.FullName || '';
+      const nameParts = userName.split(' ');
       setFormData(prev => ({
         ...prev,
-        email: user.email || '',
-        firstName: user.name?.split(' ')[0] || '',
-        lastName: user.name?.split(' ').slice(1).join(' ') || ''
+        email: user.email || user.Email || '',
+        phone: user.phone || user.phoneNumber || user.PhoneNumber || '',
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || ''
       }));
     }
   }, [isAuthenticated, location, navigate, user]);
 
   const fetchTourData = async (tourId) => {
     try {
+      console.log('Fetching tour data for ID:', tourId);
       const response = await tourService.getTourById(tourId);
-      if (response) {
-        setTourData(response);
+      console.log('Tour data response:', response);
+      
+      // Handle different response structures
+      let tourData = response;
+      if (response?.data) {
+        tourData = response.data;
+      } else if (response?.Data) {
+        tourData = response.Data;
       }
+      
+      setTourData(tourData);
     } catch (error) {
       console.error('Error fetching tour:', error);
+      alert('Không thể tải thông tin tour. Vui lòng thử lại.');
       navigate('/tours');
     } finally {
       setLoading(false);
@@ -132,9 +166,17 @@ const CheckoutPage = () => {
     setIsProcessing(true);
 
     try {
-      // Create booking
+      // Normalize tour ID
+      const tourId = tourData.id || tourData.Id;
+      if (!tourId) {
+        alert('Không tìm thấy thông tin tour. Vui lòng thử lại.');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Create booking request
       const bookingRequest = {
-        tourId: tourData.id,
+        tourId: tourId,
         tourDate: bookingData.tourDate,
         numberOfGuests: bookingData.numberOfGuests,
         customerName: `${formData.firstName} ${formData.lastName}`.trim(),
@@ -143,35 +185,55 @@ const CheckoutPage = () => {
         specialRequests: formData.specialRequests || null,
         paymentMethod: selectedMethod === 'vnpay' ? 'VNPay' : 
                       selectedMethod === 'paypal' ? 'PayPal' : 
-                      selectedMethod === 'creditcard' ? 'CreditCard' : 'Cash',
+                      selectedMethod === 'creditcard' ? 'CreditCard' : 
+                      selectedMethod === 'cash' ? 'Cash' : 'VNPay',
         guests: bookingData.guests || []
       };
 
+      console.log('Creating booking with request:', bookingRequest);
       const bookingResponse = await bookingService.createBooking(bookingRequest);
+      console.log('Booking response:', bookingResponse);
       
-      if (bookingResponse.success && bookingResponse.data) {
-        const bookingId = bookingResponse.data.id;
-
+      // Handle different response structures
+      const success = bookingResponse.success || bookingResponse.Success || false;
+      const bookingDataResponse = bookingResponse.data || bookingResponse.Data;
+      const bookingId = bookingDataResponse?.id || bookingDataResponse?.Id;
+      
+      if (success && bookingId) {
         // If VNPay, create payment URL and redirect
         if (selectedMethod === 'vnpay') {
+          console.log('Creating VNPay payment URL for booking:', bookingId);
           const paymentResponse = await paymentService.createPaymentUrl(bookingId);
-          if (paymentResponse.success && paymentResponse.data) {
-            window.location.href = paymentResponse.data;
+          console.log('Payment URL response:', paymentResponse);
+          
+          const paymentSuccess = paymentResponse.success || paymentResponse.Success || false;
+          const paymentUrl = paymentResponse.data || paymentResponse.Data;
+          
+          if (paymentSuccess && paymentUrl) {
+            // Redirect to VNPay payment page
+            window.location.href = paymentUrl;
           } else {
-            alert('Không thể tạo URL thanh toán. Vui lòng thử lại.');
+            const errorMessage = paymentResponse.message || paymentResponse.Message || 'Không thể tạo URL thanh toán. Vui lòng thử lại.';
+            alert(errorMessage);
             setIsProcessing(false);
           }
         } else {
-          // For other payment methods, redirect to booking history
-          navigate('/bookings');
+          // For other payment methods (Cash, BankTransfer), redirect to booking history
+          navigate('/bookings', { 
+            state: { 
+              message: 'Đặt tour thành công! Vui lòng thanh toán khi đến nơi.' 
+            } 
+          });
         }
       } else {
-        alert(bookingResponse.message || 'Không thể tạo đặt tour. Vui lòng thử lại.');
+        const errorMessage = bookingResponse.message || bookingResponse.Message || 'Không thể tạo đặt tour. Vui lòng thử lại.';
+        alert(errorMessage);
         setIsProcessing(false);
       }
     } catch (error) {
       console.error('Payment error:', error);
-      alert(error.message || 'Đã xảy ra lỗi. Vui lòng thử lại.');
+      const errorMessage = error.message || error.response?.data?.message || 'Đã xảy ra lỗi. Vui lòng thử lại.';
+      alert(errorMessage);
       setIsProcessing(false);
     }
   };
@@ -224,6 +286,64 @@ const CheckoutPage = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Cột trái - Biểu mẫu */}
           <div className="lg:col-span-2">
+            {/* Booking Details */}
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+              <h2 className="text-2xl font-bold mb-6">Thông tin đặt tour</h2>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Tour Date */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Ngày khởi hành *
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input 
+                      type="date"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      value={bookingData.tourDate}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => setBookingData(prev => ({ ...prev, tourDate: e.target.value }))}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Number of Guests */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Số lượng khách *
+                  </label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <div className="flex items-center gap-4 pl-10">
+                      <button 
+                        type="button"
+                        onClick={() => setBookingData(prev => ({ 
+                          ...prev, 
+                          numberOfGuests: Math.max(1, prev.numberOfGuests - 1) 
+                        }))}
+                        className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 font-bold text-gray-700 transition-colors"
+                      >
+                        -
+                      </button>
+                      <span className="flex-1 text-center font-bold text-lg">{bookingData.numberOfGuests}</span>
+                      <button 
+                        type="button"
+                        onClick={() => setBookingData(prev => ({ 
+                          ...prev, 
+                          numberOfGuests: Math.min(20, prev.numberOfGuests + 1) 
+                        }))}
+                        className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 font-bold text-gray-700 transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <ContactForm 
               formData={formData} 
               setFormData={setFormData}
@@ -260,7 +380,7 @@ const CheckoutPage = () => {
                   Hoàn tất thanh toán - {new Intl.NumberFormat('vi-VN', {
                     style: 'currency',
                     currency: 'VND'
-                  }).format(tourData.price * bookingData.numberOfGuests || tourData.price)}
+                  }).format((tourData.price || tourData.Price || 0) * bookingData.numberOfGuests)}
                   <ChevronRight size={20} />
                 </>
               )}
@@ -272,10 +392,16 @@ const CheckoutPage = () => {
             <OrderSummary 
               tourData={{
                 ...tourData,
-                title: tourData.name || tourData.title,
-                price: tourData.price,
+                title: tourData.name || tourData.Name || tourData.title || 'Tour',
+                name: tourData.name || tourData.Name || tourData.title || 'Tour',
+                image: tourData.primaryImageUrl || tourData.PrimaryImageUrl || tourData.imageUrl || tourData.image || '',
+                price: tourData.price || tourData.Price || 0,
+                location: tourData.location || tourData.Location || tourData.destinationName || tourData.DestinationName || '',
+                date: bookingData.tourDate,
                 guests: bookingData.numberOfGuests,
-                total: (tourData.price || 0) * bookingData.numberOfGuests
+                total: (tourData.price || tourData.Price || 0) * bookingData.numberOfGuests,
+                serviceFee: Math.round((tourData.price || tourData.Price || 0) * bookingData.numberOfGuests * 0.1),
+                insurance: 0
               }} 
             />
           </div>

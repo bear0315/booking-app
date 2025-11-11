@@ -16,18 +16,33 @@ const DestinationsSection = () => {
     try {
       // Get featured destinations first, then fallback to popular
       let response = await destinationService.getFeaturedDestinations(6);
+      console.log('Featured destinations response:', response);
+      
       if (!Array.isArray(response) || response.length === 0) {
         response = await destinationService.getPopularDestinations(6);
+        console.log('Popular destinations response:', response);
       }
       if (!Array.isArray(response) || response.length === 0) {
         response = await destinationService.getActiveDestinations();
+        console.log('Active destinations response:', response);
       }
       
+      // Ensure we have an array
+      let destinationsData = [];
       if (Array.isArray(response)) {
-        setDestinations(response.slice(0, 6)); // Limit to 6
-      } else if (response.data && Array.isArray(response.data)) {
-        setDestinations(response.data.slice(0, 6));
+        destinationsData = response;
+      } else if (response?.data && Array.isArray(response.data)) {
+        destinationsData = response.data;
+      } else if (response?.Data && Array.isArray(response.Data)) {
+        destinationsData = response.Data;
+      } else if (response?.items && Array.isArray(response.items)) {
+        destinationsData = response.items;
+      } else if (response?.Items && Array.isArray(response.Items)) {
+        destinationsData = response.Items;
       }
+      
+      console.log('Final destinations data:', destinationsData);
+      setDestinations(destinationsData.slice(0, 6)); // Limit to 6
     } catch (error) {
       console.error('Error fetching destinations:', error);
       setDestinations([]);
@@ -116,11 +131,21 @@ const DestinationsSection = () => {
                 className="flex gap-6 transition-transform duration-500 ease-in-out"
                 style={{ transform: `translateX(-${currentIndex * (100 / itemsPerView + 1.5)}%)` }}
               >
-                {destinations.map((destination) => (
-                <div
-                  key={destination.id}
-                  className="flex-shrink-0 w-[calc(25%-18px)] min-w-[280px]"
-                >
+                {destinations.map((destination, index) => {
+                  // Normalize destination data (handle both PascalCase and camelCase)
+                  const destId = destination.id || destination.Id;
+                  const destName = destination.name || destination.Name || 'Destination';
+                  const destImage = destination.imageUrl || destination.ImageUrl || destination.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80';
+                  const destRating = destination.averageRating || destination.AverageRating || destination.rating || 0;
+                  const destReviews = destination.totalReviews || destination.TotalReviews || destination.reviews || 0;
+                  const destPrice = destination.startingPrice || destination.StartingPrice || destination.startPrice || 0;
+                  const destTourCount = destination.tourCount || destination.TourCount || destination.tours || 0;
+                  
+                  return (
+                  <div
+                    key={destId || `destination-${index}`}
+                    className="flex-shrink-0 w-[calc(25%-18px)] min-w-[280px]"
+                  >
                   <div className="group relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                     {/* Image with Arch Shape */}
                     <div className="relative h-80 overflow-hidden">
@@ -132,8 +157,8 @@ const DestinationsSection = () => {
                         }}
                       >
                         <img
-                          src={destination.imageUrl || destination.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80'}
-                          alt={destination.name}
+                          src={destImage}
+                          alt={destName}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         />
                         {/* Gradient Overlay */}
@@ -144,7 +169,7 @@ const DestinationsSection = () => {
                       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
                         <div className="bg-white/95 backdrop-blur-sm px-6 py-2 rounded-full shadow-lg">
                           <h3 className="text-xl font-bold text-gray-900 text-center">
-                            {destination.name}
+                            {destName}
                           </h3>
                         </div>
                       </div>
@@ -156,10 +181,12 @@ const DestinationsSection = () => {
                       <div className="flex items-center justify-center gap-2 mb-3">
                         <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1.5 rounded-full">
                           <Star size={16} className="fill-yellow-400 text-yellow-400" />
-                          <span className="font-bold text-yellow-600">{destination.averageRating?.toFixed(1) || destination.rating || '0'}</span>
+                          <span className="font-bold text-yellow-600">
+                            {destRating.toFixed(1)}
+                          </span>
                         </div>
                         <span className="text-sm text-gray-600">
-                          ({(destination.totalReviews || destination.reviews || 0).toLocaleString('vi-VN')} Đánh giá)
+                          ({destReviews.toLocaleString('vi-VN')} Đánh giá)
                         </span>
                       </div>
 
@@ -171,18 +198,19 @@ const DestinationsSection = () => {
                             {new Intl.NumberFormat('vi-VN', {
                               style: 'currency',
                               currency: 'VND'
-                            }).format(destination.startingPrice || destination.startPrice || 0)}
+                            }).format(destPrice)}
                           </span></span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-700">
                           <MapPin size={18} className="text-cyan-500" />
-                          <span className="font-bold">{destination.tourCount || destination.tours || 0}</span> Tour
+                          <span className="font-bold">{destTourCount}</span> Tour
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                ))}
+                );
+                })}
               </div>
             </div>
           )}

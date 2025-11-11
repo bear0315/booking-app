@@ -74,13 +74,18 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await authService.login(email, password);
-      if (response.success) {
-        // Get user data from multiple sources
-        let userData = response.user || response.data?.user;
+      
+      // Handle both lowercase and PascalCase response formats
+      const success = response.success || response.Success || false;
+      
+      if (success) {
+        // Get user data from multiple sources (handle both cases)
+        let userData = response.user || response.User || response.data?.user || response.data?.User;
         
         // If not in response, get from token
-        if (!userData && response.accessToken) {
-          userData = getUserFromToken(response.accessToken);
+        const accessToken = response.accessToken || response.AccessToken;
+        if (!userData && accessToken) {
+          userData = getUserFromToken(accessToken);
         }
         
         // Merge with response data
@@ -99,16 +104,35 @@ export const AuthProvider = ({ children }) => {
           }
         }
         
+        // Normalize user data structure
         if (userData) {
-          setUser(userData);
+          const normalizedUser = {
+            id: userData.id || userData.Id,
+            userId: userData.userId || userData.Id,
+            email: userData.email || userData.Email,
+            name: userData.name || userData.FullName || userData.fullName,
+            fullName: userData.fullName || userData.FullName,
+            phone: userData.phone || userData.PhoneNumber || userData.phoneNumber,
+            phoneNumber: userData.phoneNumber || userData.PhoneNumber,
+            avatar: userData.avatar || userData.Avatar,
+            role: userData.role || userData.Role,
+            status: userData.status || userData.Status,
+            lastLoginAt: userData.lastLoginAt || userData.LastLoginAt,
+            memberSince: userData.memberSince || userData.MemberSince
+          };
+          
+          setUser(normalizedUser);
           setIsAuthenticated(true);
-          return { success: true, data: response, user: userData };
+          return { success: true, data: response, user: normalizedUser };
         }
         
         return { success: true, data: response };
       }
-      return { success: false, message: response.message || 'Login failed' };
+      
+      const message = response.message || response.Message || 'Login failed';
+      return { success: false, message: message };
     } catch (error) {
+      console.error('Login error:', error);
       return { success: false, message: error.message || 'Login failed' };
     }
   };

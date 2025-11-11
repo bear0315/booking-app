@@ -8,17 +8,32 @@ export const destinationService = {
 
   // Get active destinations
   getActiveDestinations: async () => {
-    return await apiRequest('/Destinations/active');
+    const response = await apiRequest('/Destinations/active');
+    // Handle both array and object response
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return response.data || response.Data || response.items || response.Items || response;
   },
 
   // Get popular destinations
   getPopularDestinations: async (take = 10) => {
-    return await apiRequest(`/Destinations/popular?take=${take}`);
+    const response = await apiRequest(`/Destinations/popular?take=${take}`);
+    // Handle both array and object response
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return response.data || response.Data || response.items || response.Items || response;
   },
 
   // Get featured destinations
   getFeaturedDestinations: async (take = 10) => {
-    return await apiRequest(`/Destinations/featured?take=${take}`);
+    const response = await apiRequest(`/Destinations/featured?take=${take}`);
+    // Handle both array and object response
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return response.data || response.Data || response.items || response.Items || response;
   },
 
   // Search destinations

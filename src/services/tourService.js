@@ -3,7 +3,9 @@ import { apiRequest } from './api';
 export const tourService = {
   // Get all tours with pagination
   getAllTours: async (pageNumber = 1, pageSize = 10) => {
-    return await apiRequest(`/Tours?pageNumber=${pageNumber}&pageSize=${pageSize}`);
+    const response = await apiRequest(`/Tours?pageNumber=${pageNumber}&pageSize=${pageSize}`);
+    // Return response as-is (should be PagedResult<TourListResponse>)
+    return response;
   },
 
   // Search tours
@@ -33,12 +35,22 @@ export const tourService = {
 
   // Get featured tours
   getFeaturedTours: async (take = 10) => {
-    return await apiRequest(`/Tours/featured?take=${take}`);
+    const response = await apiRequest(`/Tours/featured?take=${take}`);
+    // Handle both array and object response
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return response.data || response.Data || response.items || response.Items || response;
   },
 
   // Get popular tours
   getPopularTours: async (take = 10) => {
-    return await apiRequest(`/Tours/popular?take=${take}`);
+    const response = await apiRequest(`/Tours/popular?take=${take}`);
+    // Handle both array and object response
+    if (Array.isArray(response)) {
+      return response;
+    }
+    return response.data || response.Data || response.items || response.Items || response;
   },
 
   // Get related tours

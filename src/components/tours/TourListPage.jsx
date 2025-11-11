@@ -65,18 +65,54 @@ const TourListPage = () => {
         sortDesc: true
       };
       
+      console.log('Fetching tours with params:', searchParams);
       const response = await tourService.searchTours(searchParams);
-      if (response.data) {
-        setTours(response.data);
-        setTotalPages(response.totalPages || 1);
+      console.log('Search tours response:', response);
+      
+      // Handle different response structures (PagedResult)
+      let toursData = [];
+      let totalPagesCount = 1;
+      
+      if (Array.isArray(response)) {
+        toursData = response;
+      } else if (response?.data && Array.isArray(response.data)) {
+        toursData = response.data;
+        totalPagesCount = response.totalPages || response.TotalPages || 1;
+      } else if (response?.Data && Array.isArray(response.Data)) {
+        toursData = response.Data;
+        totalPagesCount = response.TotalPages || response.totalPages || 1;
+      } else if (response?.items && Array.isArray(response.items)) {
+        toursData = response.items;
+        totalPagesCount = response.totalPages || 1;
+      } else if (response?.Items && Array.isArray(response.Items)) {
+        toursData = response.Items;
+        totalPagesCount = response.TotalPages || 1;
       } else {
         // Fallback to getAllTours if search fails
+        console.log('Trying fallback: getAllTours');
         const allToursResponse = await tourService.getAllTours(page, pageSize);
-        if (allToursResponse.data) {
-          setTours(allToursResponse.data);
-          setTotalPages(allToursResponse.totalPages || 1);
+        console.log('All tours response:', allToursResponse);
+        
+        if (Array.isArray(allToursResponse)) {
+          toursData = allToursResponse;
+        } else if (allToursResponse?.data && Array.isArray(allToursResponse.data)) {
+          toursData = allToursResponse.data;
+          totalPagesCount = allToursResponse.totalPages || allToursResponse.TotalPages || 1;
+        } else if (allToursResponse?.Data && Array.isArray(allToursResponse.Data)) {
+          toursData = allToursResponse.Data;
+          totalPagesCount = allToursResponse.TotalPages || allToursResponse.totalPages || 1;
+        } else if (allToursResponse?.items && Array.isArray(allToursResponse.items)) {
+          toursData = allToursResponse.items;
+          totalPagesCount = allToursResponse.totalPages || 1;
+        } else if (allToursResponse?.Items && Array.isArray(allToursResponse.Items)) {
+          toursData = allToursResponse.Items;
+          totalPagesCount = allToursResponse.TotalPages || 1;
         }
       }
+      
+      console.log('Final tours data:', toursData);
+      setTours(toursData);
+      setTotalPages(totalPagesCount);
     } catch (error) {
       console.error('Error fetching tours:', error);
       // Try to get featured tours as fallback
@@ -84,9 +120,14 @@ const TourListPage = () => {
         const featuredResponse = await tourService.getFeaturedTours(10);
         if (Array.isArray(featuredResponse)) {
           setTours(featuredResponse);
+        } else if (featuredResponse?.data && Array.isArray(featuredResponse.data)) {
+          setTours(featuredResponse.data);
+        } else if (featuredResponse?.Data && Array.isArray(featuredResponse.Data)) {
+          setTours(featuredResponse.Data);
         }
       } catch (fallbackError) {
         console.error('Fallback fetch failed:', fallbackError);
+        setTours([]);
       }
     } finally {
       setLoading(false);
@@ -129,8 +170,17 @@ const TourListPage = () => {
       return;
     }
     
+    // Get tour ID (handle both PascalCase and camelCase)
+    const tourId = tour.id || tour.Id;
+    
+    if (!tourId) {
+      console.error('Tour ID is missing:', tour);
+      alert('Không thể xác định tour. Vui lòng thử lại.');
+      return;
+    }
+    
     // Navigate to tour detail first, then to checkout
-    navigate(`/tour?id=${tour.id}`, {
+    navigate(`/tour?id=${tourId}`, {
       state: {
         tourData: tour
       }
@@ -344,16 +394,30 @@ const TourListPage = () => {
                 <p className="text-gray-500 text-lg">Không tìm thấy tour nào</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 gap-6">
-                {tours.map(tour => (
-                <div
-                  key={tour.id}
+            <div className="grid md:grid-cols-2 gap-6">
+                {tours.map((tour, index) => {
+                  // Normalize tour data (handle both PascalCase and camelCase)
+                  const tourId = tour.id || tour.Id;
+                  const tourName = tour.name || tour.Name || tour.title || 'Tour';
+                  const tourImage = tour.primaryImageUrl || tour.PrimaryImageUrl || tour.imageUrl || tour.imageUrl || tour.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80';
+                  const tourLocation = tour.location || tour.Location || tour.destinationName || tour.DestinationName || 'N/A';
+                  const tourPrice = tour.price || tour.Price || 0;
+                  const tourRating = tour.averageRating || tour.AverageRating || tour.rating || 0;
+                  const tourReviews = tour.totalReviews || tour.TotalReviews || tour.reviews || 0;
+                  const tourDuration = tour.duration || tour.Duration || `${tour.durationDays || tour.DurationDays || 0} ngày`;
+                  const tourMaxGuests = tour.maxGuests || tour.MaxGuests || tour.places || 0;
+                  const tourIsFeatured = tour.isFeatured || tour.IsFeatured || false;
+                  const tourDifficulty = tour.difficulty || tour.Difficulty || '';
+                  
+                  return (
+                  <div
+                    key={tourId || `tour-${index}`}
                   className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
                 >
                   <div className="relative h-72 overflow-hidden">
                     <img
-                      src={tour.image}
-                      alt={tour.title}
+                      src={tourImage}
+                      alt={tourName}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     />
 
@@ -363,10 +427,10 @@ const TourListPage = () => {
                       {new Intl.NumberFormat('vi-VN', {
                         style: 'currency',
                         currency: 'VND'
-                      }).format(tour.price || 0)}
+                      }).format(tourPrice)}
                     </div>
 
-                    {tour.isFeatured && (
+                    {tourIsFeatured && (
                       <div className="absolute top-4 left-4 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
                         <TrendingUp size={14} />
                         NỔI BẬT
@@ -374,48 +438,53 @@ const TourListPage = () => {
                     )}
 
                     <button
-                      onClick={() => toggleLike(tour.id)}
-                      className={`absolute bottom-4 right-4 p-2.5 rounded-full transition-all ${likedTours.includes(tour.id)
+                      onClick={() => toggleLike(tourId)}
+                      className={`absolute bottom-4 right-4 p-2.5 rounded-full transition-all ${likedTours.includes(tourId)
                           ? 'bg-red-500 text-white shadow-lg shadow-red-500/50'
                           : 'bg-white/90 backdrop-blur-sm text-gray-600'
                         }`}
                     >
-                      <Heart size={18} className={likedTours.includes(tour.id) ? 'fill-current' : ''} />
+                      <Heart size={18} className={likedTours.includes(tourId) ? 'fill-current' : ''} />
                     </button>
 
-                    {tour.difficulty && (
-                      <div className="absolute bottom-4 left-4">
+                    {tourDifficulty && (
+                    <div className="absolute bottom-4 left-4">
                         <span className={`inline-block px-3 py-1.5 rounded-full text-xs font-bold shadow-lg ${
-                          tour.difficulty === 'Easy' || tour.difficulty === 'Dễ' ? 'bg-gradient-to-r from-green-400 to-green-500 text-white' :
-                          tour.difficulty === 'Medium' || tour.difficulty === 'Trung bình' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' :
+                          tourDifficulty === 'Easy' || tourDifficulty === 'Dễ' ? 'bg-gradient-to-r from-green-400 to-green-500 text-white' :
+                          tourDifficulty === 'Medium' || tourDifficulty === 'Trung bình' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' :
                             'bg-gradient-to-r from-red-500 to-pink-500 text-white'
                         }`}>
-                          {tour.difficulty}
-                        </span>
-                      </div>
+                          {tourDifficulty}
+                      </span>
+                    </div>
                     )}
                   </div>
 
                   <div className="p-6">
                     <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
                       <MapPin size={16} className="text-cyan-500" />
-                      <span className="font-medium">{tour.location || tour.destinationName}</span>
+                      <span className="font-medium">{tourLocation}</span>
                     </div>
 
                     <h3
-                      onClick={() => navigate(`/tour?id=${tour.id}`)}
+                      onClick={() => {
+                        const id = tourId || tour.id || tour.Id;
+                        if (id) {
+                          navigate(`/tour?id=${id}`);
+                        }
+                      }}
                       className="text-xl font-bold text-gray-900 mb-3 group-hover:text-cyan-600 transition-colors cursor-pointer hover:underline"
                     >
-                      {tour.name || tour.title}
+                      {tourName}
                     </h3>
 
                     <div className="flex items-center gap-2 mb-4">
                       <div className="flex items-center gap-1 bg-yellow-50 px-2.5 py-1.5 rounded-lg">
                         {[...Array(5)].map((_, i) => (
-                          <Star key={i} size={14} className={i < Math.floor(tour.averageRating || 0) ? "fill-yellow-400 text-yellow-400" : "fill-gray-200 text-gray-200"} />
+                          <Star key={i} size={14} className={i < Math.floor(tourRating) ? "fill-yellow-400 text-yellow-400" : "fill-gray-200 text-gray-200"} />
                         ))}
                       </div>
-                      <span className="text-sm text-gray-600 font-medium">({tour.totalReviews || 0})</span>
+                      <span className="text-sm text-gray-600 font-medium">({tourReviews})</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 mb-5 pb-5 border-b border-gray-100">
@@ -425,7 +494,7 @@ const TourListPage = () => {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Thời lượng</p>
-                          <p className="font-semibold text-gray-900">{tour.duration || `${tour.durationDays} ngày`}</p>
+                          <p className="font-semibold text-gray-900">{tourDuration}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
@@ -434,13 +503,20 @@ const TourListPage = () => {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Nhóm</p>
-                          <p className="font-semibold text-gray-900">Tối đa {tour.maxGuests} người</p>
+                          <p className="font-semibold text-gray-900">Tối đa {tourMaxGuests} người</p>
                         </div>
                       </div>
                     </div>
 
                     <button
-                      onClick={() => handleBookTour(tour)}
+                      onClick={() => {
+                        // Ensure we have the normalized tour object with ID
+                        const tourWithId = {
+                          ...tour,
+                          id: tourId || tour.id || tour.Id
+                        };
+                        handleBookTour(tourWithId);
+                      }}
                       className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3.5 rounded-xl font-bold hover:shadow-lg hover:shadow-cyan-500/50 transition-all flex items-center justify-center gap-2 group"
                     >
                       <span>Đặt ngay</span>
@@ -448,34 +524,35 @@ const TourListPage = () => {
                     </button>
                   </div>
                 </div>
-                ))}
-              </div>
+                );
+                })}
+            </div>
             )}
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-12">
+            <div className="flex justify-center items-center gap-2 mt-12">
                 <button 
                   onClick={() => setPage(prev => Math.max(1, prev - 1))}
                   disabled={page === 1}
                   className="px-5 py-3 border-2 border-gray-200 rounded-xl hover:border-cyan-500 hover:text-cyan-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Trước
-                </button>
+                Trước
+              </button>
                 {[...Array(totalPages)].map((_, idx) => {
                   const pageNum = idx + 1;
                   return (
-                    <button
+                <button
                       key={pageNum}
                       onClick={() => setPage(pageNum)}
                       className={`px-5 py-3 rounded-xl font-medium transition-all ${
                         page === pageNum
-                          ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30'
-                          : 'border-2 border-gray-200 hover:border-cyan-500 hover:text-cyan-600'
-                      }`}
-                    >
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30'
+                      : 'border-2 border-gray-200 hover:border-cyan-500 hover:text-cyan-600'
+                    }`}
+                >
                       {pageNum}
-                    </button>
+                </button>
                   );
                 })}
                 <button 
@@ -483,9 +560,9 @@ const TourListPage = () => {
                   disabled={page === totalPages}
                   className="px-5 py-3 border-2 border-gray-200 rounded-xl hover:border-cyan-500 hover:text-cyan-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Sau
-                </button>
-              </div>
+                Sau
+              </button>
+            </div>
             )}
           </div>
         </div>

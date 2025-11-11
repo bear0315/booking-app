@@ -9,15 +9,21 @@ export const authService = {
       body: JSON.stringify({ email, password }),
     });
     
-    if (response.success && response.accessToken) {
-      setTokens(response.accessToken, response.refreshToken);
+    // Handle both lowercase and PascalCase response formats
+    const success = response.success || response.Success || false;
+    const accessToken = response.accessToken || response.AccessToken;
+    const refreshToken = response.refreshToken || response.RefreshToken;
+    const user = response.user || response.User || response.data?.user || response.data?.User;
+    
+    if (success && accessToken) {
+      setTokens(accessToken, refreshToken);
       
       // Get user info from token or response
-      let userData = response.user || response.data?.user;
+      let userData = user;
       
       // If user data not in response, decode from token
-      if (!userData && response.accessToken) {
-        userData = getUserFromToken(response.accessToken);
+      if (!userData && accessToken) {
+        userData = getUserFromToken(accessToken);
       }
       
       // Merge with response data if available
@@ -25,12 +31,43 @@ export const authService = {
         userData = { ...userData, ...response.data };
       }
       
+      // Normalize user data structure (handle PascalCase to camelCase)
       if (userData) {
-        localStorage.setItem('user', JSON.stringify(userData));
+        const normalizedUser = {
+          id: userData.id || userData.Id,
+          userId: userData.userId || userData.Id,
+          email: userData.email || userData.Email,
+          name: userData.name || userData.FullName || userData.fullName,
+          fullName: userData.fullName || userData.FullName,
+          phone: userData.phone || userData.PhoneNumber || userData.phoneNumber,
+          phoneNumber: userData.phoneNumber || userData.PhoneNumber,
+          avatar: userData.avatar || userData.Avatar,
+          role: userData.role || userData.Role,
+          status: userData.status || userData.Status,
+          lastLoginAt: userData.lastLoginAt || userData.LastLoginAt,
+          memberSince: userData.memberSince || userData.MemberSince
+        };
+        
+        localStorage.setItem('user', JSON.stringify(normalizedUser));
       }
     }
     
-    return response;
+    // Return normalized response
+    return {
+      success: success,
+      Success: success,
+      message: response.message || response.Message || '',
+      Message: response.message || response.Message || '',
+      user: user,
+      User: user,
+      accessToken: accessToken,
+      AccessToken: accessToken,
+      refreshToken: refreshToken,
+      RefreshToken: refreshToken,
+      accessTokenExpiresAt: response.accessTokenExpiresAt || response.AccessTokenExpiresAt,
+      refreshTokenExpiresAt: response.refreshTokenExpiresAt || response.RefreshTokenExpiresAt,
+      ...response
+    };
   },
 
   // Refresh token

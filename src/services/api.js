@@ -91,10 +91,29 @@ const handleResponse = async (response) => {
     const data = await response.json();
     
     if (!response.ok) {
-      const error = new Error(data.message || 'An error occurred');
+      const errorMessage = data.message || data.Message || 'An error occurred';
+      const error = new Error(errorMessage);
       error.status = response.status;
       error.data = data;
       throw error;
+    }
+    
+    // Normalize response to handle both PascalCase and camelCase
+    // This ensures compatibility with different API response formats
+    if (data.Success !== undefined || data.success !== undefined) {
+      return {
+        ...data,
+        success: data.success !== undefined ? data.success : data.Success,
+        Success: data.Success !== undefined ? data.Success : data.success,
+        message: data.message || data.Message || '',
+        Message: data.Message || data.message || '',
+        user: data.user || data.User,
+        User: data.User || data.user,
+        accessToken: data.accessToken || data.AccessToken,
+        AccessToken: data.AccessToken || data.accessToken,
+        refreshToken: data.refreshToken || data.RefreshToken,
+        RefreshToken: data.RefreshToken || data.refreshToken
+      };
     }
     
     return data;

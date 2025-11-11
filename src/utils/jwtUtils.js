@@ -26,20 +26,45 @@ export const getUserFromToken = (token) => {
   const decoded = decodeJWT(token);
   if (!decoded) return null;
   
+  // Extract claims (handle both full claim names and short names)
+  const userId = decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || 
+                 decoded['nameid'] || 
+                 decoded['sub'] ||
+                 decoded['userId'] ||
+                 decoded['UserId'];
+  
+  const email = decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || 
+                decoded['email'] ||
+                decoded['Email'];
+  
+  const name = decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || 
+               decoded['name'] ||
+               decoded['unique_name'] ||
+               decoded['Name'] ||
+               decoded['FullName'];
+  
+  const role = decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || 
+               decoded['role'] ||
+               decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role'] ||
+               decoded['Role'];
+  
+  const status = decoded['Status'] || decoded['status'];
+  
+  const phone = decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/mobilephone'] ||
+                decoded['mobilephone'] ||
+                decoded['PhoneNumber'] ||
+                decoded['phoneNumber'];
+  
   return {
-    userId: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || 
-            decoded['nameid'] || 
-            decoded['sub'] ||
-            decoded['userId'],
-    email: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || 
-           decoded['email'],
-    name: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || 
-          decoded['name'] ||
-          decoded['unique_name'],
-    role: decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || 
-          decoded['role'] ||
-          decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role'],
-    status: decoded['Status'] || decoded['status']
+    id: userId ? parseInt(userId) : null,
+    userId: userId ? parseInt(userId) : null,
+    email: email,
+    name: name,
+    fullName: name,
+    phone: phone,
+    phoneNumber: phone,
+    role: role,
+    status: status
   };
 };
 
