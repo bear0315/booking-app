@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { apiRequest } from '../../services/api';
 import { 
   Plus, 
   Search, 
@@ -21,115 +24,63 @@ import {
   CheckCircle,
   Filter,
   Download,
-  RefreshCw
+  RefreshCw,
+  Loader
 } from 'lucide-react';
 
-const ToursManagement = () => {
-  const [tours, setTours] = useState([
-    { 
-      id: 1, 
-      name: 'Hành Trình Dưới Chân Matterhorn', 
-      location: 'Zermatt, Thụy Sĩ',
-      country: 'Thụy Sĩ',
-      price: 299, 
-      duration: '5 ngày 4 đêm', 
-      status: 'Active', 
-      bookings: 45,
-      rating: 4.9,
-      reviews: 128,
-      maxGuests: 12,
-      difficulty: 'Trung bình',
-      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80',
-      description: 'Khám phá vẻ đẹp hùng vĩ của đỉnh Matterhorn',
-      featured: true
-    },
-    { 
-      id: 2, 
-      name: 'Vòng Quanh Núi Mont Blanc', 
-      location: 'Chamonix, Pháp',
-      country: 'Pháp',
-      price: 499, 
-      duration: '7 ngày 6 đêm', 
-      status: 'Active', 
-      bookings: 32,
-      rating: 4.8,
-      reviews: 94,
-      maxGuests: 10,
-      difficulty: 'Thử thách',
-      image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=80',
-      description: 'Hành trình vòng quanh ngọn núi cao nhất châu Âu',
-      featured: true
-    },
-    { 
-      id: 3, 
-      name: 'Phiêu Lưu Dolomites', 
-      location: 'Dolomites, Ý',
-      country: 'Ý',
-      price: 399, 
-      duration: '6 ngày 5 đêm', 
-      status: 'Inactive', 
-      bookings: 18,
-      rating: 4.7,
-      reviews: 76,
-      maxGuests: 14,
-      difficulty: 'Trung bình',
-      image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&q=80',
-      description: 'Khám phá dãy núi đá vôi tuyệt đẹp của Ý',
-      featured: false
-    },
-    { 
-      id: 4, 
-      name: 'Khám Phá Dãy Alps Thụy Sĩ', 
-      location: 'Interlaken, Thụy Sĩ',
-      country: 'Thụy Sĩ',
-      price: 599, 
-      duration: '8 ngày 7 đêm', 
-      status: 'Active', 
-      bookings: 28,
-      rating: 4.9,
-      reviews: 112,
-      maxGuests: 8,
-      difficulty: 'Thử thách',
-      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80',
-      description: 'Trải nghiệm hoàn chỉnh vùng Alps Thụy Sĩ',
-      featured: false
-    },
-    { 
-      id: 5, 
-      name: 'Đường Mòn Núi Austria', 
-      location: 'Innsbruck, Áo',
-      country: 'Áo',
-      price: 349, 
-      duration: '5 ngày 4 đêm', 
-      status: 'Active', 
-      bookings: 41,
-      rating: 4.6,
-      reviews: 89,
-      maxGuests: 15,
-      difficulty: 'Dễ',
-      image: 'https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=400&q=80',
-      description: 'Khám phá vùng núi xinh đẹp của Áo',
-      featured: false
-    },
-    { 
-      id: 6, 
-      name: 'Hành Trình Khu Vực Jungfrau', 
-      location: 'Grindelwald, Thụy Sĩ',
-      country: 'Thụy Sĩ',
-      price: 449, 
-      duration: '6 ngày 5 đêm', 
-      status: 'Active', 
-      bookings: 52,
-      rating: 5.0,
-      reviews: 156,
-      maxGuests: 12,
-      difficulty: 'Trung bình',
-      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80',
-      description: 'Tour đỉnh cao qua khu vực Jungfrau',
-      featured: true
-    }
-  ]);
+// Tour Service
+const tourService = {
+  getAllTours: async (pageNumber = 1, pageSize = 100) => {
+    return await apiRequest(`/Tours?pageNumber=${pageNumber}&pageSize=${pageSize}`);
+  },
+  
+  getTourById: async (id) => {
+    return await apiRequest(`/Tours/${id}`);
+  },
+  
+  createTour: async (tourData) => {
+    return await apiRequest('/Tours', {
+      method: 'POST',
+      body: JSON.stringify(tourData),
+    });
+  },
+  
+  updateTour: async (id, tourData) => {
+    return await apiRequest(`/Tours/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...tourData, id }),
+    });
+  },
+  
+  deleteTour: async (id) => {
+    return await apiRequest(`/Tours/${id}`, {
+      method: 'DELETE',
+    });
+  },
+  
+  toggleFeatured: async (id) => {
+    return await apiRequest(`/Tours/${id}/toggle-featured`, {
+      method: 'PATCH',
+    });
+  },
+  
+  updateStatus: async (id, status) => {
+    return await apiRequest(`/Tours/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(status),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  },
+};
 
+const ToursManagement = () => {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+  const [tours, setTours] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
@@ -138,22 +89,110 @@ const ToursManagement = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    longDescription: '',
+    location: '',
+    country: '',
+    price: 0,
+    discountPrice: 0,
+    duration: '',
+    maxGroupSize: 1,
+    difficulty: 'Easy',
+    category: 'Adventure',
+    status: 'Active',
+    isFeatured: false,
+    imageUrl: '',
+    startDates: [],
+  });
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    if (user?.role !== 'Admin' && user?.role !== 'Manager' && user?.role !== 'Staff') {
+      navigate('/');
+      return;
+    }
+
+    fetchTours();
+  }, [isAuthenticated, user]);
+
+  const fetchTours = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await tourService.getAllTours(1, 100);
+      
+      console.log('Tours API Response:', response);
+      
+      // Backend returns PagedResult<TourListResponse>
+      // Structure: { items, totalCount, pageNumber, pageSize, totalPages }
+      const tourData = response.items || response.Items || 
+                       response.data?.items || response.Data?.Items ||
+                       response.data || response.Data || 
+                       [];
+      
+      // Map API response to component structure
+      const mappedTours = tourData.map(tour => ({
+        id: tour.id || tour.Id,
+        name: tour.name || tour.Name || 'N/A',
+        slug: tour.slug || tour.Slug || '',
+        location: tour.location || tour.Location || 'N/A',
+        country: tour.country || tour.Country || 'N/A',
+        price: tour.price || tour.Price || 0,
+        discountPrice: tour.discountPrice || tour.DiscountPrice,
+        duration: tour.duration || tour.Duration || 'N/A',
+        durationDays: tour.durationDays || tour.DurationDays || 0,
+        status: tour.status || tour.Status || 'Active',
+        bookings: tour.totalBookings || tour.TotalBookings || 0,
+        rating: tour.averageRating || tour.AverageRating || 0,
+        reviews: tour.totalReviews || tour.TotalReviews || 0,
+        maxGuests: tour.maxGroupSize || tour.MaxGroupSize || tour.maxGuests || tour.MaxGuests || 0,
+        difficulty: tour.difficulty || tour.Difficulty || 'Easy',
+        image: tour.primaryImageUrl || tour.PrimaryImageUrl || 
+               tour.imageUrl || tour.ImageUrl || 
+               tour.coverImage || tour.CoverImage || 
+               'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80',
+        description: tour.description || tour.Description || '',
+        longDescription: tour.longDescription || tour.LongDescription || '',
+        featured: tour.isFeatured || tour.IsFeatured || false,
+        category: tour.category || tour.Category || 'Adventure',
+        startDates: tour.startDates || tour.StartDates || [],
+      }));
+      
+      setTours(mappedTours);
+      console.log('Mapped tours:', mappedTours);
+    } catch (error) {
+      console.error('Error fetching tours:', error);
+      setError(error.message || 'Failed to load tours');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Statistics
   const stats = {
     total: tours.length,
     active: tours.filter(t => t.status === 'Active').length,
-    inactive: tours.filter(t => t.status === 'Inactive').length,
-    totalBookings: tours.reduce((sum, t) => sum + t.bookings, 0),
-    avgRating: (tours.reduce((sum, t) => sum + t.rating, 0) / tours.length).toFixed(1)
+    inactive: tours.filter(t => t.status === 'Inactive' || t.status === 'Draft').length,
+    totalBookings: tours.reduce((sum, t) => sum + (t.bookings || 0), 0),
+    avgRating: tours.length > 0 ? (tours.reduce((sum, t) => sum + (t.rating || 0), 0) / tours.length).toFixed(1) : '0.0'
   };
 
   // Filter tours
   const filteredTours = tours.filter(tour => {
     const matchesSearch = 
-      tour.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tour.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tour.country.toLowerCase().includes(searchQuery.toLowerCase());
+      (tour.name && tour.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (tour.location && tour.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (tour.country && tour.country.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesStatus = statusFilter === 'all' || tour.status === statusFilter;
     const matchesDifficulty = difficultyFilter === 'all' || tour.difficulty === difficultyFilter;
@@ -163,71 +202,277 @@ const ToursManagement = () => {
 
   const getDifficultyBadge = (difficulty) => {
     const difficultyConfig = {
-      'Dễ': { bg: 'bg-green-100', text: 'text-green-700' },
-      'Trung bình': { bg: 'bg-yellow-100', text: 'text-yellow-700' },
-      'Thử thách': { bg: 'bg-red-100', text: 'text-red-700' },
-      'Chuyên nghiệp': { bg: 'bg-purple-100', text: 'text-purple-700' }
+      'Easy': { bg: 'bg-green-100', text: 'text-green-700', label: 'Dễ' },
+      'Medium': { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Trung bình' },
+      'Hard': { bg: 'bg-red-100', text: 'text-red-700', label: 'Thử thách' },
+      'Expert': { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Chuyên nghiệp' }
     };
     
-    const config = difficultyConfig[difficulty];
+    const config = difficultyConfig[difficulty] || difficultyConfig['Easy'];
     
     return (
       <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
         <Mountain size={12} />
-        {difficulty}
+        {config.label}
       </span>
     );
   };
 
   const getStatusBadge = (status) => {
+    const statusConfig = {
+      'Active': { bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle, label: 'Hoạt động' },
+      'Inactive': { bg: 'bg-gray-100', text: 'text-gray-700', icon: AlertCircle, label: 'Tạm dừng' },
+      'Draft': { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: AlertCircle, label: 'Nháp' }
+    };
+    
+    const config = statusConfig[status] || statusConfig['Draft'];
+    const Icon = config.icon;
+    
     return (
-      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
-        status === 'Active' 
-          ? 'bg-green-100 text-green-700' 
-          : 'bg-gray-100 text-gray-700'
-      }`}>
-        {status === 'Active' ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
-        {status === 'Active' ? 'Hoạt động' : 'Tạm dừng'}
+      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
+        <Icon size={12} />
+        {config.label}
       </span>
     );
   };
 
-  const handleViewDetails = (tour) => {
-    setSelectedTour(tour);
-    setShowDetailModal(true);
-    setShowActionMenu(null);
-  };
-
-  const handleEditTour = (tour) => {
-    setSelectedTour(tour);
-    setShowEditModal(true);
-    setShowActionMenu(null);
-  };
-
-  const handleDeleteTour = (tourId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa tour này?')) {
-      setTours(tours.filter(t => t.id !== tourId));
+  const handleViewDetails = async (tour) => {
+    try {
+      setActionLoading(true);
+      const response = await tourService.getTourById(tour.id);
+      if (response) {
+        const fullTour = response.data || response.Data || response;
+        setSelectedTour({
+          ...tour,
+          ...fullTour
+        });
+        setShowDetailModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching tour details:', error);
+      setSelectedTour(tour);
+      setShowDetailModal(true);
+    } finally {
+      setActionLoading(false);
       setShowActionMenu(null);
     }
   };
 
-  const handleToggleStatus = (tourId) => {
-    setTours(tours.map(t => 
-      t.id === tourId 
-        ? { ...t, status: t.status === 'Active' ? 'Inactive' : 'Active' } 
-        : t
-    ));
-    setShowActionMenu(null);
+  const handleEditTour = async (tour) => {
+    try {
+      setActionLoading(true);
+      const response = await tourService.getTourById(tour.id);
+      const fullTour = response?.data || response?.Data || response || tour;
+      
+      setFormData({
+        name: fullTour.name || '',
+        slug: fullTour.slug || '',
+        description: fullTour.description || '',
+        longDescription: fullTour.longDescription || '',
+        location: fullTour.location || '',
+        country: fullTour.country || '',
+        price: fullTour.price || 0,
+        discountPrice: fullTour.discountPrice || 0,
+        duration: fullTour.duration || '',
+        maxGroupSize: fullTour.maxGroupSize || fullTour.maxGuests || 1,
+        difficulty: fullTour.difficulty || 'Easy',
+        category: fullTour.category || 'Adventure',
+        status: fullTour.status || 'Active',
+        isFeatured: fullTour.isFeatured || fullTour.featured || false,
+        imageUrl: fullTour.imageUrl || fullTour.image || '',
+        startDates: fullTour.startDates || [],
+      });
+      
+      setSelectedTour(fullTour);
+      setShowEditModal(true);
+    } catch (error) {
+      console.error('Error loading tour for edit:', error);
+      alert('Không thể tải thông tin tour: ' + error.message);
+    } finally {
+      setActionLoading(false);
+      setShowActionMenu(null);
+    }
   };
 
-  const handleToggleFeatured = (tourId) => {
-    setTours(tours.map(t => 
-      t.id === tourId 
-        ? { ...t, featured: !t.featured } 
-        : t
-    ));
-    setShowActionMenu(null);
+  const handleDeleteTour = async (tourId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa tour này?')) {
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await tourService.deleteTour(tourId);
+      setTours(tours.filter(t => t.id !== tourId));
+      alert('Xóa tour thành công!');
+    } catch (error) {
+      console.error('Error deleting tour:', error);
+      alert('Không thể xóa tour: ' + error.message);
+    } finally {
+      setActionLoading(false);
+      setShowActionMenu(null);
+    }
   };
+
+  const handleToggleStatus = async (tourId) => {
+    const tour = tours.find(t => t.id === tourId);
+    const newStatus = tour.status === 'Active' ? 'Inactive' : 'Active';
+    
+    setActionLoading(true);
+    try {
+      // Backend expects raw TourStatus enum string as body
+      await tourService.updateStatus(tourId, `"${newStatus}"`); // Send as JSON string
+      
+      setTours(tours.map(t => 
+        t.id === tourId ? { ...t, status: newStatus } : t
+      ));
+      alert('Cập nhật trạng thái thành công!');
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.Message ||
+                          error.message || 
+                          'Không thể cập nhật trạng thái';
+      alert(errorMessage);
+    } finally {
+      setActionLoading(false);
+      setShowActionMenu(null);
+    }
+  };
+  const handleToggleFeatured = async (tourId) => {
+    setActionLoading(true);
+    try {
+      await tourService.toggleFeatured(tourId);
+      setTours(tours.map(t => 
+        t.id === tourId ? { ...t, featured: !t.featured } : t
+      ));
+      alert('Cập nhật tour nổi bật thành công!');
+    } catch (error) {
+      console.error('Error toggling featured:', error);
+      alert('Không thể cập nhật tour nổi bật: ' + error.message);
+    } finally {
+      setActionLoading(false);
+      setShowActionMenu(null);
+    }
+  };
+
+  const handleSaveTour = async () => {
+    setActionLoading(true);
+    try {
+      // Prepare tour data matching backend CreateTourRequest/UpdateTourRequest
+      const tourData = {
+        name: formData.name,
+        slug: formData.slug || formData.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, ''),
+        description: formData.description,
+        longDescription: formData.longDescription,
+        location: formData.location,
+        country: formData.country,
+        price: parseFloat(formData.price) || 0,
+        discountPrice: parseFloat(formData.discountPrice) || 0,
+        duration: formData.duration,
+        durationDays: parseInt(formData.duration.split(' ')[0]) || 1, // Extract days from "5 ngày 4 đêm"
+        maxGroupSize: parseInt(formData.maxGroupSize) || 1,
+        difficulty: formData.difficulty,
+        category: formData.category,
+        status: formData.status,
+        isFeatured: formData.isFeatured,
+        primaryImageUrl: formData.imageUrl,
+        // Add other required fields if needed
+        destinationId: 1, // You may need to add destination selector
+        type: 'Group', // Default tour type
+      };
+  
+      if (showEditModal && selectedTour) {
+        // Update existing tour
+        tourData.id = selectedTour.id;
+        await tourService.updateTour(selectedTour.id, tourData);
+        alert('Cập nhật tour thành công!');
+      } else {
+        // Create new tour
+        await tourService.createTour(tourData);
+        alert('Thêm tour mới thành công!');
+      }
+      
+      // Refresh tour list
+      await fetchTours();
+      
+      // Close modal and reset form
+      setShowAddModal(false);
+      setShowEditModal(false);
+      setSelectedTour(null);
+      setFormData({
+        name: '',
+        slug: '',
+        description: '',
+        longDescription: '',
+        location: '',
+        country: '',
+        price: 0,
+        discountPrice: 0,
+        duration: '',
+        maxGroupSize: 1,
+        difficulty: 'Easy',
+        category: 'Adventure',
+        status: 'Active',
+        isFeatured: false,
+        imageUrl: '',
+        startDates: [],
+      });
+    } catch (error) {
+      console.error('Error saving tour:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.Message ||
+                          error.message || 
+                          'Không thể lưu tour';
+      alert(errorMessage);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
+
+  const handleExport = () => {
+    const headers = ['ID', 'Tên Tour', 'Địa điểm', 'Giá', 'Thời lượng', 'Số khách', 'Độ khó', 'Trạng thái', 'Đánh giá', 'Bookings'];
+    const data = filteredTours.map(t => [
+      t.id,
+      t.name,
+      t.location,
+      t.price,
+      t.duration,
+      t.maxGuests,
+      t.difficulty,
+      t.status,
+      t.rating,
+      t.bookings
+    ]);
+    
+    const csv = [headers, ...data].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tours_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  if (loading && tours.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="animate-spin text-orange-500 mx-auto mb-4" size={48} />
+          <p className="text-gray-600">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -239,16 +484,43 @@ const ToursManagement = () => {
             <p className="text-gray-600 mt-1">Quản lý và cập nhật tất cả các tour du lịch</p>
           </div>
           <div className="flex gap-3">
-            <button className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 font-semibold">
+            <button 
+              onClick={handleExport}
+              className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 font-semibold"
+            >
               <Download size={18} />
               Export
             </button>
-            <button className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 font-semibold">
-              <RefreshCw size={18} />
+            <button 
+              onClick={fetchTours}
+              disabled={loading}
+              className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 font-semibold disabled:opacity-50"
+            >
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
               Làm mới
             </button>
             <button 
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setFormData({
+                  name: '',
+                  slug: '',
+                  description: '',
+                  longDescription: '',
+                  location: '',
+                  country: '',
+                  price: 0,
+                  discountPrice: 0,
+                  duration: '',
+                  maxGroupSize: 1,
+                  difficulty: 'Easy',
+                  category: 'Adventure',
+                  status: 'Active',
+                  isFeatured: false,
+                  imageUrl: '',
+                  startDates: [],
+                });
+                setShowAddModal(true);
+              }}
               className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
             >
               <Plus size={20} />
@@ -256,6 +528,13 @@ const ToursManagement = () => {
             </button>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
 
         {/* Statistics Cards */}
         <div className="grid md:grid-cols-5 gap-4 mb-6">
@@ -337,6 +616,7 @@ const ToursManagement = () => {
               <option value="all">Tất cả trạng thái</option>
               <option value="Active">Hoạt động</option>
               <option value="Inactive">Tạm dừng</option>
+              <option value="Draft">Nháp</option>
             </select>
             
             <select 
@@ -345,17 +625,21 @@ const ToursManagement = () => {
               onChange={(e) => setDifficultyFilter(e.target.value)}
             >
               <option value="all">Tất cả độ khó</option>
-              <option value="Dễ">Dễ</option>
-              <option value="Trung bình">Trung bình</option>
-              <option value="Thử thách">Thử thách</option>
-              <option value="Chuyên nghiệp">Chuyên nghiệp</option>
+              <option value="Easy">Dễ</option>
+              <option value="Medium">Trung bình</option>
+              <option value="Hard">Thử thách</option>
+              <option value="Expert">Chuyên nghiệp</option>
             </select>
           </div>
         </div>
 
         {/* Tours Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTours.length === 0 ? (
+          {loading ? (
+            <div className="col-span-full flex justify-center py-12">
+              <Loader className="animate-spin text-orange-500" size={48} />
+            </div>
+          ) : filteredTours.length === 0 ? (
             <div className="col-span-full bg-white rounded-xl shadow-sm p-12 text-center">
               <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MapPin size={40} className="text-gray-400" />
@@ -400,7 +684,7 @@ const ToursManagement = () => {
 
                   {/* Price */}
                   <div className="absolute bottom-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-full font-bold text-lg shadow-lg">
-                    ${tour.price}
+                    {formatCurrency(tour.price)}
                   </div>
 
                   {/* Difficulty */}
@@ -416,7 +700,7 @@ const ToursManagement = () => {
                     <span className="font-medium">{tour.location}</span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
                     {tour.name}
                   </h3>
 
@@ -429,7 +713,7 @@ const ToursManagement = () => {
                     <div className="text-center">
                       <div className="flex items-center justify-center gap-1 text-yellow-500 mb-1">
                         <Star size={14} className="fill-current" />
-                        <span className="font-bold text-sm text-gray-900">{tour.rating}</span>
+                        <span className="font-bold text-sm text-gray-900">{tour.rating.toFixed(1)}</span>
                       </div>
                       <p className="text-xs text-gray-500">{tour.reviews} reviews</p>
                     </div>
@@ -453,14 +737,16 @@ const ToursManagement = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleViewDetails(tour)}
-                      className="flex-1 bg-blue-500 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
+                      disabled={actionLoading}
+                      className="flex-1 bg-blue-500 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <Eye size={16} />
                       Chi tiết
                     </button>
                     <button
                       onClick={() => handleEditTour(tour)}
-                      className="flex-1 bg-orange-500 text-white py-2.5 rounded-lg font-semibold hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+                      disabled={actionLoading}
+                      className="flex-1 bg-orange-500 text-white py-2.5 rounded-lg font-semibold hover:bg-orange-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <Edit size={16} />
                       Sửa
@@ -468,7 +754,8 @@ const ToursManagement = () => {
                     <div className="relative">
                       <button
                         onClick={() => setShowActionMenu(showActionMenu === tour.id ? null : tour.id)}
-                        className="p-2.5 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:text-orange-600 transition-all"
+                        disabled={actionLoading}
+                        className="p-2.5 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:text-orange-600 transition-all disabled:opacity-50"
                       >
                         <MoreVertical size={18} />
                       </button>
@@ -516,28 +803,6 @@ const ToursManagement = () => {
             ))
           )}
         </div>
-
-        {/* Pagination */}
-        <div className="flex justify-center items-center gap-2 mt-8">
-          <button className="px-5 py-2 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:text-orange-600 transition-colors font-medium">
-            Trước
-          </button>
-          {[1, 2, 3].map(page => (
-            <button
-              key={page}
-              className={`px-5 py-2 rounded-lg font-medium transition-all ${
-                page === 1
-                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
-                  : 'border-2 border-gray-200 hover:border-orange-500 hover:text-orange-600'
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-          <button className="px-5 py-2 border-2 border-gray-200 rounded-lg hover:border-orange-500 hover:text-orange-600 transition-colors font-medium">
-            Sau
-          </button>
-        </div>
       </div>
 
       {/* Detail Modal */}
@@ -579,6 +844,9 @@ const ToursManagement = () => {
               <div className="bg-orange-50 rounded-xl p-5">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">{selectedTour.name}</h3>
                 <p className="text-gray-700 mb-4">{selectedTour.description}</p>
+                {selectedTour.longDescription && (
+                  <p className="text-gray-600 mb-4">{selectedTour.longDescription}</p>
+                )}
                 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
@@ -597,7 +865,7 @@ const ToursManagement = () => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Giá tour</p>
-                      <p className="font-bold text-2xl text-green-600">${selectedTour.price}</p>
+                      <p className="font-bold text-2xl text-green-600">{formatCurrency(selectedTour.price)}</p>
                     </div>
                   </div>
                   
@@ -630,7 +898,7 @@ const ToursManagement = () => {
                     <Star size={24} className="text-yellow-500 fill-current" />
                     <span className="font-semibold text-gray-700">Đánh giá</span>
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">{selectedTour.rating}</p>
+                  <p className="text-3xl font-bold text-gray-900">{selectedTour.rating.toFixed(1)}</p>
                   <p className="text-sm text-gray-500">{selectedTour.reviews} đánh giá</p>
                 </div>
                 
@@ -648,7 +916,7 @@ const ToursManagement = () => {
                     <DollarSign size={24} className="text-green-500" />
                     <span className="font-semibold text-gray-700">Doanh thu</span>
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">${selectedTour.price * selectedTour.bookings}</p>
+                  <p className="text-3xl font-bold text-gray-900">{formatCurrency(selectedTour.price * selectedTour.bookings)}</p>
                   <p className="text-sm text-gray-500">Tổng thu nhập</p>
                 </div>
               </div>
@@ -679,14 +947,16 @@ const ToursManagement = () => {
                     setShowDetailModal(false);
                     handleEditTour(selectedTour);
                   }}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                  disabled={actionLoading}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <Edit size={18} />
                   Chỉnh sửa tour
                 </button>
                 <button 
                   onClick={() => handleToggleStatus(selectedTour.id)}
-                  className="flex-1 bg-blue-500 text-white py-3 rounded-xl font-semibold hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
+                  disabled={actionLoading}
+                  className="flex-1 bg-blue-500 text-white py-3 rounded-xl font-semibold hover:bg-blue-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {selectedTour.status === 'Active' ? (
                     <>
@@ -705,7 +975,8 @@ const ToursManagement = () => {
                     handleDeleteTour(selectedTour.id);
                     setShowDetailModal(false);
                   }}
-                  className="flex-1 bg-red-500 text-white py-3 rounded-xl font-semibold hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+                  disabled={actionLoading}
+                  className="flex-1 bg-red-500 text-white py-3 rounded-xl font-semibold hover:bg-red-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <Trash2 size={18} />
                   Xóa tour
@@ -720,7 +991,7 @@ const ToursManagement = () => {
       {(showAddModal || showEditModal) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-t-2xl">
+            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-t-2xl z-10">
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-2xl font-bold mb-2">
@@ -752,7 +1023,8 @@ const ToursManagement = () => {
                 <input
                   type="text"
                   placeholder="VD: Hành Trình Dưới Chân Matterhorn"
-                  defaultValue={showEditModal ? selectedTour?.name : ''}
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
                 />
               </div>
@@ -766,7 +1038,8 @@ const ToursManagement = () => {
                   <input
                     type="text"
                     placeholder="VD: Zermatt"
-                    defaultValue={showEditModal ? selectedTour?.location : ''}
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
                   />
                 </div>
@@ -777,7 +1050,8 @@ const ToursManagement = () => {
                   <input
                     type="text"
                     placeholder="VD: Thụy Sĩ"
-                    defaultValue={showEditModal ? selectedTour?.country : ''}
+                    value={formData.country}
+                    onChange={(e) => setFormData({...formData, country: e.target.value})}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
                   />
                 </div>
@@ -786,12 +1060,27 @@ const ToursManagement = () => {
               {/* Description */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Mô tả *
+                  Mô tả ngắn *
+                </label>
+                <textarea
+                  placeholder="Mô tả ngắn gọn về tour..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  rows="2"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Long Description */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Mô tả chi tiết
                 </label>
                 <textarea
                   placeholder="Mô tả chi tiết về tour..."
-                  defaultValue={showEditModal ? selectedTour?.description : ''}
-                  rows="3"
+                  value={formData.longDescription}
+                  onChange={(e) => setFormData({...formData, longDescription: e.target.value})}
+                  rows="4"
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
                 />
               </div>
@@ -800,12 +1089,13 @@ const ToursManagement = () => {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Giá (USD) *
+                    Giá (VND) *
                   </label>
                   <input
                     type="number"
-                    placeholder="299"
-                    defaultValue={showEditModal ? selectedTour?.price : ''}
+                    placeholder="5000000"
+                    value={formData.price}
+                    onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value) || 0})}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
                   />
                 </div>
@@ -816,7 +1106,8 @@ const ToursManagement = () => {
                   <input
                     type="text"
                     placeholder="5 ngày 4 đêm"
-                    defaultValue={showEditModal ? selectedTour?.duration : ''}
+                    value={formData.duration}
+                    onChange={(e) => setFormData({...formData, duration: e.target.value})}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
                   />
                 </div>
@@ -831,7 +1122,8 @@ const ToursManagement = () => {
                   <input
                     type="number"
                     placeholder="12"
-                    defaultValue={showEditModal ? selectedTour?.maxGuests : ''}
+                    value={formData.maxGroupSize}
+                    onChange={(e) => setFormData({...formData, maxGroupSize: parseInt(e.target.value) || 1})}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
                   />
                 </div>
@@ -840,16 +1132,34 @@ const ToursManagement = () => {
                     Độ khó *
                   </label>
                   <select 
-                    defaultValue={showEditModal ? selectedTour?.difficulty : ''}
+                    value={formData.difficulty}
+                    onChange={(e) => setFormData({...formData, difficulty: e.target.value})}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
                   >
-                    <option value="">Chọn độ khó</option>
-                    <option value="Dễ">Dễ</option>
-                    <option value="Trung bình">Trung bình</option>
-                    <option value="Thử thách">Thử thách</option>
-                    <option value="Chuyên nghiệp">Chuyên nghiệp</option>
+                    <option value="Easy">Dễ</option>
+                    <option value="Medium">Trung bình</option>
+                    <option value="Hard">Thử thách</option>
+                    <option value="Expert">Chuyên nghiệp</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Danh mục *
+                </label>
+                <select 
+                  value={formData.category}
+                  onChange={(e) => setFormData({...formData, category: e.target.value})}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
+                >
+                  <option value="Adventure">Phiêu lưu</option>
+                  <option value="Cultural">Văn hóa</option>
+                  <option value="Wildlife">Động vật hoang dã</option>
+                  <option value="Hiking">Leo núi</option>
+                  <option value="Beach">Biển</option>
+                </select>
               </div>
 
               {/* Image URL */}
@@ -860,7 +1170,8 @@ const ToursManagement = () => {
                 <input
                   type="text"
                   placeholder="https://..."
-                  defaultValue={showEditModal ? selectedTour?.image : ''}
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
                 />
               </div>
@@ -872,11 +1183,13 @@ const ToursManagement = () => {
                     Trạng thái *
                   </label>
                   <select 
-                    defaultValue={showEditModal ? selectedTour?.status : 'Active'}
+                    value={formData.status}
+                    onChange={(e) => setFormData({...formData, status: e.target.value})}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none"
                   >
                     <option value="Active">Hoạt động</option>
                     <option value="Inactive">Tạm dừng</option>
+                    <option value="Draft">Nháp</option>
                   </select>
                 </div>
                 <div>
@@ -886,7 +1199,8 @@ const ToursManagement = () => {
                   <div className="flex items-center gap-3 h-12">
                     <input
                       type="checkbox"
-                      defaultChecked={showEditModal ? selectedTour?.featured : false}
+                      checked={formData.isFeatured}
+                      onChange={(e) => setFormData({...formData, isFeatured: e.target.checked})}
                       className="w-5 h-5 accent-orange-500 rounded"
                     />
                     <span className="text-gray-700">Đặt làm tour nổi bật</span>
@@ -902,20 +1216,24 @@ const ToursManagement = () => {
                     setShowEditModal(false);
                     setSelectedTour(null);
                   }}
-                  className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                  disabled={actionLoading}
+                  className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all disabled:opacity-50"
                 >
                   Hủy
                 </button>
                 <button
-                  onClick={() => {
-                    alert(showAddModal ? 'Tour đã được thêm!' : 'Tour đã được cập nhật!');
-                    setShowAddModal(false);
-                    setShowEditModal(false);
-                    setSelectedTour(null);
-                  }}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all"
+                  onClick={handleSaveTour}
+                  disabled={actionLoading}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {showAddModal ? 'Thêm tour' : 'Lưu thay đổi'}
+                  {actionLoading ? (
+                    <>
+                      <Loader className="animate-spin" size={18} />
+                      Đang lưu...
+                    </>
+                  ) : (
+                    showAddModal ? 'Thêm tour' : 'Lưu thay đổi'
+                  )}
                 </button>
               </div>
             </div>

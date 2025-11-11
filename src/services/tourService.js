@@ -1,10 +1,34 @@
+// services/tourService.js
 import { apiRequest } from './api';
 
 export const tourService = {
   // Get all tours with pagination
   getAllTours: async (pageNumber = 1, pageSize = 10) => {
     const response = await apiRequest(`/Tours?pageNumber=${pageNumber}&pageSize=${pageSize}`);
-    // Return response as-is (should be PagedResult<TourListResponse>)
+    return response;
+  },
+
+  // Get tour by ID
+  getTourById: async (id) => {
+    const response = await apiRequest(`/Tours/${id}`);
+    return response;
+  },
+
+  // Get tour by slug
+  getTourBySlug: async (slug) => {
+    const response = await apiRequest(`/Tours/slug/${slug}`);
+    return response;
+  },
+
+  // Get featured tours
+  getFeaturedTours: async (take = 10) => {
+    const response = await apiRequest(`/Tours/featured?take=${take}`);
+    return response;
+  },
+
+  // Get popular tours
+  getPopularTours: async (take = 10) => {
+    const response = await apiRequest(`/Tours/popular?take=${take}`);
     return response;
   },
 
@@ -23,61 +47,6 @@ export const tourService = {
     return await apiRequest(`/Tours/search?${queryParams.toString()}`);
   },
 
-  // Get tour by ID
-  getTourById: async (id) => {
-    return await apiRequest(`/Tours/${id}`);
-  },
-
-  // Get tour by slug
-  getTourBySlug: async (slug) => {
-    return await apiRequest(`/Tours/slug/${slug}`);
-  },
-
-  // Get featured tours
-  getFeaturedTours: async (take = 10) => {
-    const response = await apiRequest(`/Tours/featured?take=${take}`);
-    // Handle both array and object response
-    if (Array.isArray(response)) {
-      return response;
-    }
-    return response.data || response.Data || response.items || response.Items || response;
-  },
-
-  // Get popular tours
-  getPopularTours: async (take = 10) => {
-    const response = await apiRequest(`/Tours/popular?take=${take}`);
-    // Handle both array and object response
-    if (Array.isArray(response)) {
-      return response;
-    }
-    return response.data || response.Data || response.items || response.Items || response;
-  },
-
-  // Get related tours
-  getRelatedTours: async (id, take = 5) => {
-    return await apiRequest(`/Tours/${id}/related?take=${take}`);
-  },
-
-  // Get tours by destination
-  getToursByDestination: async (destinationId, pageNumber = 1, pageSize = 10) => {
-    return await apiRequest(`/Tours/destination/${destinationId}?pageNumber=${pageNumber}&pageSize=${pageSize}`);
-  },
-
-  // Get tours by category
-  getToursByCategory: async (category, pageNumber = 1, pageSize = 10) => {
-    return await apiRequest(`/Tours/category/${category}?pageNumber=${pageNumber}&pageSize=${pageSize}`);
-  },
-
-  // Check tour availability
-  checkAvailability: async (id, tourDate, numberOfGuests) => {
-    return await apiRequest(`/Tours/${id}/availability?tourDate=${tourDate}&numberOfGuests=${numberOfGuests}`);
-  },
-
-  // Get available dates
-  getAvailableDates: async (id, fromDate, toDate) => {
-    return await apiRequest(`/Tours/${id}/available-dates?fromDate=${fromDate}&toDate=${toDate}`);
-  },
-
   // Admin: Create tour
   createTour: async (tourData) => {
     return await apiRequest('/Tours', {
@@ -90,7 +59,7 @@ export const tourService = {
   updateTour: async (id, tourData) => {
     return await apiRequest(`/Tours/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ ...tourData, id }),
+      body: JSON.stringify(tourData), // Backend expects request body without id in URL
     });
   },
 
@@ -108,11 +77,14 @@ export const tourService = {
     });
   },
 
-  // Admin: Update status
+  // Admin: Update status - FIXED: Backend expects TourStatus enum as body
   updateStatus: async (id, status) => {
     return await apiRequest(`/Tours/${id}/status`, {
       method: 'PATCH',
-      body: JSON.stringify(status),
+      body: JSON.stringify(status), // Send raw status string
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
   },
 
@@ -120,5 +92,40 @@ export const tourService = {
   getStatistics: async () => {
     return await apiRequest('/Tours/statistics');
   },
-};
 
+  // Admin: Update tour statistics
+  updateStatistics: async (id) => {
+    return await apiRequest(`/Tours/${id}/update-statistics`, {
+      method: 'POST',
+    });
+  },
+
+  // Admin: Update tour rating
+  updateRating: async (id) => {
+    return await apiRequest(`/Tours/${id}/update-rating`, {
+      method: 'POST',
+    });
+  },
+
+  // Admin: Bulk operations
+  bulkUpdateStatus: async (tourIds, status) => {
+    return await apiRequest('/Tours/bulk/status', {
+      method: 'PATCH',
+      body: JSON.stringify({ tourIds, status }),
+    });
+  },
+
+  bulkUpdateFeatured: async (tourIds, isFeatured) => {
+    return await apiRequest('/Tours/bulk/featured', {
+      method: 'PATCH',
+      body: JSON.stringify({ tourIds, isFeatured }),
+    });
+  },
+
+  bulkDelete: async (tourIds) => {
+    return await apiRequest('/Tours/bulk', {
+      method: 'DELETE',
+      body: JSON.stringify(tourIds),
+    });
+  },
+};

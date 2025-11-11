@@ -21,64 +21,64 @@ const App = () => {
       <Router>
         <div className="min-h-screen bg-white">
           <Routes>
-          {/* Trang chủ */}
-          <Route path="/" element={
-            <>
-              <Header />
-              <HomePage />
-              <Footer />
-            </>
-          } />
+            {/* Trang chủ */}
+            <Route path="/" element={
+              <>
+                <Header />
+                <HomePage />
+                <Footer />
+              </>
+            } />
 
-          {/* Danh sách tour */}
-          <Route path="/tours" element={
-            <>
-              <Header />
-              <main className="pt-[120px]">
-                <TourListPage />
-              </main>
-              <Footer />
-            </>
-          } />
+            {/* Danh sách tour */}
+            <Route path="/tours" element={
+              <>
+                <Header />
+                <main className="pt-[120px]">
+                  <TourListPage />
+                </main>
+                <Footer />
+              </>
+            } />
 
-          {/* Chi tiết tour */}
-          <Route path="/tour" element={
-            <>
-              <Header />
-              <main className="pt-[80px]">
-                <TourDetailPage />
-              </main>
-              <Footer />
-            </>
-          } />
+            {/* Chi tiết tour */}
+            <Route path="/tour" element={
+              <>
+                <Header />
+                <main className="pt-[80px]">
+                  <TourDetailPage />
+                </main>
+                <Footer />
+              </>
+            } />
 
-          {/* Checkout */}
-          <Route path="/checkout" element={<CheckoutPage />} />
+            {/* Checkout */}
+            <Route path="/checkout" element={<CheckoutPage />} />
 
-          {/* Lịch sử đặt tour */}
-          <Route path="/bookings" element={
-            <>
-              <Header />
-              <main className="pt-[150px]">   {}
-                <BookingHistoryPage />
-              </main>
-              <Footer />
-            </>
-          } />  {}
+            {/* Lịch sử đặt tour */}
+            <Route path="/bookings" element={
+              <>
+                <Header />
+                <main className="pt-[150px]">
+                  <BookingHistoryPage />
+                </main>
+                <Footer />
+              </>
+            } />
 
-          {/* Login */}
-          <Route path="/login" element={<LoginPage />} />
+            {/* Login */}
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Admin */}
-          <Route path="/admin" element={<AdminPage />} />
+            {/* Admin */}
+            <Route path="/admin" element={<AdminPage />} />
 
-          {/* Payment Pages */}
-          <Route path="/payment/success" element={<PaymentSuccessPage />} />
-          <Route path="/payment/failure" element={<PaymentFailurePage />} />
-          <Route path="/payment/error" element={<PaymentFailurePage />} />
-        </Routes>
-      </div>
-    </Router>
+            {/* Payment Pages - Updated paths to match backend */}
+            <Route path="/payment-success" element={<PaymentSuccessPage />} />
+            <Route path="/payment-failure" element={<PaymentFailurePage />} />
+            <Route path="/payment-error" element={<PaymentFailurePage />} />
+          </Routes>
+        </div>
+      </Router>
     </AuthProvider>
   );
 };

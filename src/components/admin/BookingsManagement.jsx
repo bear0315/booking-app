@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { bookingService } from '../../services/bookingService';
 import { 
   Filter, 
   CheckCircle, 
@@ -19,105 +22,94 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Loader
 } from 'lucide-react';
 
 const BookingManagement = () => {
-  const [bookings, setBookings] = useState([
-    { 
-      id: 'BK001', 
-      customer: 'Nguyễn Văn An', 
-      email: 'nguyenvanan@email.com',
-      phone: '+84 912 345 678',
-      tour: 'Hành Trình Dưới Chân Matterhorn', 
-      location: 'Zermatt, Thụy Sĩ',
-      date: '2024-12-20', 
-      bookingDate: '2024-10-15',
-      guests: 2, 
-      amount: 642, 
-      status: 'Confirmed', 
-      payment: 'Paid',
-      paymentMethod: 'VNPay',
-      guide: 'Hans Mueller',
-      duration: '5 ngày'
-    },
-    { 
-      id: 'BK002', 
-      customer: 'Trần Thị Bình', 
-      email: 'tranthibinh@email.com',
-      phone: '+84 923 456 789',
-      tour: 'Vòng Quanh Núi Mont Blanc', 
-      location: 'Pháp',
-      date: '2024-11-10', 
-      bookingDate: '2024-09-20',
-      guests: 4, 
-      amount: 1996, 
-      status: 'Pending', 
-      payment: 'Pending',
-      paymentMethod: 'PayPal',
-      guide: 'Sophie Martin',
-      duration: '7 ngày'
-    },
-    { 
-      id: 'BK003', 
-      customer: 'Lê Hoàng Minh', 
-      email: 'lehoangminh@email.com',
-      phone: '+84 934 567 890',
-      tour: 'Phiêu Lưu Dolomites', 
-      location: 'Ý',
-      date: '2024-11-25', 
-      bookingDate: '2024-10-01',
-      guests: 3, 
-      amount: 1197, 
-      status: 'Confirmed', 
-      payment: 'Paid',
-      paymentMethod: 'Credit Card',
-      guide: 'Marco Rossi',
-      duration: '6 ngày'
-    },
-    { 
-      id: 'BK004', 
-      customer: 'Phạm Thu Hương', 
-      email: 'phamthuhuong@email.com',
-      phone: '+84 945 678 901',
-      tour: 'Khám Phá Dãy Alps Thụy Sĩ', 
-      location: 'Thụy Sĩ',
-      date: '2024-12-01', 
-      bookingDate: '2024-10-10',
-      guests: 2, 
-      amount: 1198, 
-      status: 'Cancelled', 
-      payment: 'Refunded',
-      paymentMethod: 'VNPay',
-      guide: 'Hans Mueller',
-      duration: '8 ngày',
-      cancelReason: 'Lý do cá nhân'
-    },
-    { 
-      id: 'BK005', 
-      customer: 'Hoàng Văn Đức', 
-      email: 'hoangvanduc@email.com',
-      phone: '+84 956 789 012',
-      tour: 'Đường Mòn Núi Austria', 
-      location: 'Áo',
-      date: '2024-11-15', 
-      bookingDate: '2024-09-25',
-      guests: 5, 
-      amount: 1745, 
-      status: 'Confirmed', 
-      payment: 'Paid',
-      paymentMethod: 'PayPal',
-      guide: 'Franz Schmidt',
-      duration: '5 ngày'
-    }
-  ]);
-
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    // Check if user is admin
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    if (user?.role !== 'Admin') {
+      navigate('/');
+      return;
+    }
+
+    fetchBookings();
+  }, [page, statusFilter, isAuthenticated, user]);
+
+  const fetchBookings = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const status = statusFilter === 'all' ? null : statusFilter;
+      const response = await bookingService.getAllBookings(page, pageSize, status);
+      
+      console.log('Bookings API Response:', response);
+      
+      if (response.success || response.Success) {
+        const bookingData = response.data || response.Data || [];
+        
+        // Map API response to component structure
+        const mappedBookings = bookingData.map(booking => ({
+          id: booking.id || booking.Id,
+          bookingCode: booking.bookingCode || booking.BookingCode,
+          customer: booking.customerName || booking.CustomerName || 'N/A',
+          email: booking.customerEmail || booking.CustomerEmail || 'N/A',
+          phone: booking.customerPhone || booking.CustomerPhone || 'N/A',
+          tour: booking.tourName || booking.TourName || 'N/A',
+          location: booking.location || booking.tourLocation || booking.TourLocation || 'N/A',
+          date: booking.tourDate || booking.TourDate || booking.startDate || booking.StartDate,
+          bookingDate: booking.bookingDate || booking.BookingDate || booking.createdAt || booking.CreatedAt,
+          guests: booking.numberOfGuests || booking.NumberOfGuests || 0,
+          amount: booking.totalAmount || booking.TotalAmount || 0,
+          status: booking.status || booking.Status || 'Pending',
+          payment: booking.paymentStatus || booking.PaymentStatus || 'Unpaid',
+          paymentMethod: booking.paymentMethod || booking.PaymentMethod || 'N/A',
+          paymentTransactionId: booking.paymentTransactionId || booking.PaymentTransactionId,
+          paymentDate: booking.paymentDate || booking.PaymentDate,
+          guide: booking.guideName || booking.GuideName || 'N/A',
+          duration: booking.duration || booking.Duration || 'N/A',
+          specialRequests: booking.specialRequests || booking.SpecialRequests,
+          cancelReason: booking.cancelReason || booking.CancelReason,
+          userId: booking.userId || booking.UserId,
+          tourId: booking.tourId || booking.TourId
+        }));
+        
+        setBookings(mappedBookings);
+        
+        // Handle pagination if available
+        if (response.totalPages || response.TotalPages) {
+          setTotalPages(response.totalPages || response.TotalPages);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      setError(error.message || 'Failed to load bookings');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Statistics
   const stats = {
@@ -130,76 +122,162 @@ const BookingManagement = () => {
   // Filter bookings
   const filteredBookings = bookings.filter(booking => {
     const matchesSearch = 
-      booking.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.tour.toLowerCase().includes(searchQuery.toLowerCase());
+      (booking.bookingCode && booking.bookingCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (booking.customer && booking.customer.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (booking.tour && booking.tour.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
     const matchesPayment = paymentFilter === 'all' || booking.payment === paymentFilter;
     
-    return matchesSearch && matchesStatus && matchesPayment;
+    return matchesSearch && matchesPayment;
   });
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'Confirmed': { bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle },
-      'Pending': { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: Clock },
-      'Cancelled': { bg: 'bg-red-100', text: 'text-red-700', icon: XCircle }
+      'Confirmed': { bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle, label: 'Đã xác nhận' },
+      'Pending': { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: Clock, label: 'Chờ xác nhận' },
+      'Cancelled': { bg: 'bg-red-100', text: 'text-red-700', icon: XCircle, label: 'Đã hủy' },
+      'Completed': { bg: 'bg-blue-100', text: 'text-blue-700', icon: CheckCircle, label: 'Đã hoàn thành' }
     };
     
-    const config = statusConfig[status];
+    const config = statusConfig[status] || statusConfig['Pending'];
     const Icon = config.icon;
     
     return (
       <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
         <Icon size={14} />
-        {status}
+        {config.label}
       </span>
     );
   };
 
   const getPaymentBadge = (payment) => {
     const paymentConfig = {
-      'Paid': { bg: 'bg-green-100', text: 'text-green-700' },
-      'Pending': { bg: 'bg-yellow-100', text: 'text-yellow-700' },
-      'Refunded': { bg: 'bg-gray-100', text: 'text-gray-700' }
+      'Paid': { bg: 'bg-green-100', text: 'text-green-700', label: 'Đã thanh toán' },
+      'Unpaid': { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Chưa thanh toán' },
+      'Refunded': { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Đã hoàn tiền' },
+      'Pending': { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Chờ xử lý' }
     };
     
-    const config = paymentConfig[payment];
+    const config = paymentConfig[payment] || paymentConfig['Unpaid'];
     
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
-        {payment}
+        {config.label}
       </span>
     );
   };
 
-  const handleViewDetails = (booking) => {
-    setSelectedBooking(booking);
-    setShowDetailModal(true);
+  const handleViewDetails = async (booking) => {
+    try {
+      // Fetch full booking details
+      const response = await bookingService.getBookingById(booking.id);
+      if (response.success || response.Success) {
+        const fullBooking = response.data || response.Data;
+        setSelectedBooking({
+          ...booking,
+          ...fullBooking
+        });
+        setShowDetailModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching booking details:', error);
+      setSelectedBooking(booking);
+      setShowDetailModal(true);
+    }
     setShowActionMenu(null);
   };
 
-  const handleUpdateStatus = (bookingId, newStatus) => {
-    setBookings(bookings.map(b => 
-      b.id === bookingId ? { ...b, status: newStatus } : b
-    ));
-    setShowActionMenu(null);
-  };
-
-  const handleUpdatePayment = (bookingId, newPayment) => {
-    setBookings(bookings.map(b => 
-      b.id === bookingId ? { ...b, payment: newPayment } : b
-    ));
-    setShowActionMenu(null);
-  };
-
-  const handleDeleteBooking = (bookingId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa booking này?')) {
-      setBookings(bookings.filter(b => b.id !== bookingId));
+  const handleUpdateStatus = async (bookingId, newStatus) => {
+    setActionLoading(true);
+    try {
+      const response = await bookingService.updateBookingStatus(bookingId, {
+        status: newStatus
+      });
+      
+      if (response.success || response.Success) {
+        // Update local state
+        setBookings(bookings.map(b => 
+          b.id === bookingId ? { ...b, status: newStatus } : b
+        ));
+        alert('Cập nhật trạng thái thành công!');
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Không thể cập nhật trạng thái: ' + error.message);
+    } finally {
+      setActionLoading(false);
       setShowActionMenu(null);
     }
   };
+
+  const handleDeleteBooking = async (bookingId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa booking này?')) {
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const response = await bookingService.deleteBooking(bookingId);
+      
+      if (response.success || response.Success) {
+        setBookings(bookings.filter(b => b.id !== bookingId));
+        alert('Xóa booking thành công!');
+      }
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      alert('Không thể xóa booking: ' + error.message);
+    } finally {
+      setActionLoading(false);
+      setShowActionMenu(null);
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('vi-VN');
+  };
+
+  const handleExport = () => {
+    // Export to CSV
+    const headers = ['Mã Booking', 'Khách hàng', 'Email', 'Tour', 'Ngày khởi hành', 'Số khách', 'Tổng tiền', 'Trạng thái', 'Thanh toán'];
+    const data = filteredBookings.map(b => [
+      b.bookingCode,
+      b.customer,
+      b.email,
+      b.tour,
+      formatDate(b.date),
+      b.guests,
+      b.amount,
+      b.status,
+      b.payment
+    ]);
+    
+    const csv = [headers, ...data].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bookings_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  if (loading && bookings.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="animate-spin text-cyan-500 mx-auto mb-4" size={48} />
+          <p className="text-gray-600">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -211,16 +289,30 @@ const BookingManagement = () => {
             <p className="text-gray-600 mt-1">Theo dõi và quản lý tất cả đặt tour</p>
           </div>
           <div className="flex gap-3">
-            <button className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 font-semibold">
+            <button 
+              onClick={handleExport}
+              className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 font-semibold"
+            >
               <Download size={18} />
               Export
             </button>
-            <button className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 flex items-center gap-2 font-semibold">
-              <RefreshCw size={18} />
+            <button 
+              onClick={fetchBookings}
+              disabled={loading}
+              className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 flex items-center gap-2 font-semibold disabled:opacity-50"
+            >
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
               Làm mới
             </button>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
 
         {/* Statistics Cards */}
         <div className="grid md:grid-cols-4 gap-4 mb-6">
@@ -264,7 +356,7 @@ const BookingManagement = () => {
                 <span className="font-semibold">Doanh thu</span>
               </div>
             </div>
-            <p className="text-3xl font-bold text-gray-900">${stats.revenue.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-gray-900">{formatCurrency(stats.revenue)}</p>
             <p className="text-sm text-gray-500 mt-1">Tổng thu nhập</p>
           </div>
         </div>
@@ -286,11 +378,15 @@ const BookingManagement = () => {
             <select 
               className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-cyan-500 focus:outline-none font-medium"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="Confirmed">Đã xác nhận</option>
               <option value="Pending">Chờ xác nhận</option>
+              <option value="Completed">Đã hoàn thành</option>
               <option value="Cancelled">Đã hủy</option>
             </select>
             
@@ -301,7 +397,8 @@ const BookingManagement = () => {
             >
               <option value="all">Tất cả thanh toán</option>
               <option value="Paid">Đã thanh toán</option>
-              <option value="Pending">Chờ thanh toán</option>
+              <option value="Unpaid">Chưa thanh toán</option>
+              <option value="Pending">Chờ xử lý</option>
               <option value="Refunded">Đã hoàn tiền</option>
             </select>
           </div>
@@ -325,7 +422,14 @@ const BookingManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredBookings.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-12">
+                      <Loader className="animate-spin text-cyan-500 mx-auto mb-3" size={36} />
+                      <p className="text-gray-500">Đang tải...</p>
+                    </td>
+                  </tr>
+                ) : filteredBookings.length === 0 ? (
                   <tr>
                     <td colSpan="9" className="text-center py-12">
                       <div className="flex flex-col items-center">
@@ -338,7 +442,7 @@ const BookingManagement = () => {
                   filteredBookings.map((booking) => (
                     <tr key={booking.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="py-4 px-6">
-                        <span className="font-bold text-cyan-600">{booking.id}</span>
+                        <span className="font-bold text-cyan-600">{booking.bookingCode}</span>
                       </td>
                       <td className="py-4 px-6">
                         <div>
@@ -358,9 +462,7 @@ const BookingManagement = () => {
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-2">
                           <Calendar size={16} className="text-gray-400" />
-                          <span className="text-gray-900 font-medium">
-                            {new Date(booking.date).toLocaleDateString('vi-VN')}
-                          </span>
+                          <span className="text-gray-900 font-medium">{formatDate(booking.date)}</span>
                         </div>
                       </td>
                       <td className="py-4 px-6">
@@ -370,7 +472,7 @@ const BookingManagement = () => {
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="font-bold text-lg text-gray-900">${booking.amount}</span>
+                        <span className="font-bold text-lg text-gray-900">{formatCurrency(booking.amount)}</span>
                       </td>
                       <td className="py-4 px-6">
                         {getStatusBadge(booking.status)}
@@ -383,6 +485,7 @@ const BookingManagement = () => {
                           <button
                             onClick={() => setShowActionMenu(showActionMenu === booking.id ? null : booking.id)}
                             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            disabled={actionLoading}
                           >
                             <MoreVertical size={18} className="text-gray-600" />
                           </button>
@@ -400,26 +503,29 @@ const BookingManagement = () => {
                               {booking.status === 'Pending' && (
                                 <button
                                   onClick={() => handleUpdateStatus(booking.id, 'Confirmed')}
-                                  className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-gray-700 border-b border-gray-100"
+                                  disabled={actionLoading}
+                                  className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-gray-700 border-b border-gray-100 disabled:opacity-50"
                                 >
                                   <CheckCircle size={16} className="text-green-500" />
                                   Xác nhận booking
                                 </button>
                               )}
                               
-                              {booking.payment === 'Pending' && (
+                              {booking.status === 'Confirmed' && (
                                 <button
-                                  onClick={() => handleUpdatePayment(booking.id, 'Paid')}
-                                  className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-gray-700 border-b border-gray-100"
+                                  onClick={() => handleUpdateStatus(booking.id, 'Completed')}
+                                  disabled={actionLoading}
+                                  className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm font-medium text-gray-700 border-b border-gray-100 disabled:opacity-50"
                                 >
-                                  <DollarSign size={16} className="text-blue-500" />
-                                  Xác nhận thanh toán
+                                  <CheckCircle size={16} className="text-blue-500" />
+                                  Hoàn thành booking
                                 </button>
                               )}
                               
                               <button
                                 onClick={() => handleDeleteBooking(booking.id)}
-                                className="w-full text-left px-4 py-3 hover:bg-red-50 flex items-center gap-3 text-sm font-medium text-red-600"
+                                disabled={actionLoading}
+                                className="w-full text-left px-4 py-3 hover:bg-red-50 flex items-center gap-3 text-sm font-medium text-red-600 disabled:opacity-50"
                               >
                                 <Trash2 size={16} />
                                 Xóa booking
@@ -438,22 +544,34 @@ const BookingManagement = () => {
 
         {/* Pagination */}
         <div className="flex justify-center items-center gap-2 mt-6">
-          <button className="px-5 py-2 border-2 border-gray-200 rounded-lg hover:border-cyan-500 hover:text-cyan-600 transition-colors font-medium">
+          <button 
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1 || loading}
+            className="px-5 py-2 border-2 border-gray-200 rounded-lg hover:border-cyan-500 hover:text-cyan-600 transition-colors font-medium disabled:opacity-50"
+          >
             Trước
           </button>
-          {[1, 2, 3].map(page => (
-            <button
-              key={page}
-              className={`px-5 py-2 rounded-lg font-medium transition-all ${
-                page === 1
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg'
-                  : 'border-2 border-gray-200 hover:border-cyan-500 hover:text-cyan-600'
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-          <button className="px-5 py-2 border-2 border-gray-200 rounded-lg hover:border-cyan-500 hover:text-cyan-600 transition-colors font-medium">
+          {[...Array(Math.min(totalPages, 5))].map((_, i) => {
+            const pageNum = i + 1;
+            return (
+              <button
+                key={pageNum}
+                onClick={() => setPage(pageNum)}
+                className={`px-5 py-2 rounded-lg font-medium transition-all ${
+                  page === pageNum
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg'
+                    : 'border-2 border-gray-200 hover:border-cyan-500 hover:text-cyan-600'
+                }`}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+          <button 
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages || loading}
+            className="px-5 py-2 border-2 border-gray-200 rounded-lg hover:border-cyan-500 hover:text-cyan-600 transition-colors font-medium disabled:opacity-50"
+          >
             Sau
           </button>
         </div>
@@ -467,7 +585,7 @@ const BookingManagement = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-2xl font-bold mb-2">Chi Tiết Booking</h2>
-                  <p className="text-cyan-100">Mã: {selectedBooking.id}</p>
+                  <p className="text-cyan-100">Mã: {selectedBooking.bookingCode}</p>
                 </div>
                 <button
                   onClick={() => setShowDetailModal(false)}
@@ -548,15 +666,11 @@ const BookingManagement = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Ngày đặt</p>
-                    <p className="font-semibold text-gray-900">
-                      {new Date(selectedBooking.bookingDate).toLocaleDateString('vi-VN')}
-                    </p>
+                    <p className="font-semibold text-gray-900">{formatDate(selectedBooking.bookingDate)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Ngày khởi hành</p>
-                    <p className="font-semibold text-gray-900">
-                      {new Date(selectedBooking.date).toLocaleDateString('vi-VN')}
-                    </p>
+                    <p className="font-semibold text-gray-900">{formatDate(selectedBooking.date)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Trạng thái</p>
@@ -582,10 +696,30 @@ const BookingManagement = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Tổng tiền</p>
-                    <p className="font-bold text-2xl text-purple-600">${selectedBooking.amount}</p>
+                    <p className="font-bold text-2xl text-purple-600">{formatCurrency(selectedBooking.amount)}</p>
                   </div>
+                  {selectedBooking.paymentTransactionId && (
+                    <>
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Mã giao dịch</p>
+                        <p className="font-semibold text-gray-900">{selectedBooking.paymentTransactionId}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Ngày thanh toán</p>
+                        <p className="font-semibold text-gray-900">{formatDate(selectedBooking.paymentDate)}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
+
+              {/* Special Requests */}
+              {selectedBooking.specialRequests && (
+                <div className="bg-amber-50 rounded-xl p-5 border-l-4 border-amber-500">
+                  <h3 className="font-bold text-lg mb-2 text-amber-700">Yêu cầu đặc biệt</h3>
+                  <p className="text-gray-700">{selectedBooking.specialRequests}</p>
+                </div>
+              )}
 
               {/* Cancel Reason */}
               {selectedBooking.status === 'Cancelled' && selectedBooking.cancelReason && (
@@ -596,19 +730,74 @@ const BookingManagement = () => {
               )}
 
               {/* Actions */}
-              <div className="flex gap-3">
-                <button className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2">
+              <div className="flex gap-3 flex-wrap">
+                <button 
+                  onClick={() => window.location.href = `mailto:${selectedBooking.email}`}
+                  className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                >
                   <Mail size={18} />
                   Gửi email
                 </button>
-                <button className="flex-1 bg-green-500 text-white py-3 rounded-xl font-semibold hover:bg-green-600 transition-all flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => window.location.href = `tel:${selectedBooking.phone}`}
+                  className="flex-1 bg-green-500 text-white py-3 rounded-xl font-semibold hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                >
                   <Phone size={18} />
                   Gọi điện
                 </button>
-                <button className="flex-1 bg-gray-500 text-white py-3 rounded-xl font-semibold hover:bg-gray-600 transition-all flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => window.print()}
+                  className="flex-1 bg-gray-500 text-white py-3 rounded-xl font-semibold hover:bg-gray-600 transition-all flex items-center justify-center gap-2"
+                >
                   <Download size={18} />
-                  Tải PDF
+                  In / Tải PDF
                 </button>
+              </div>
+
+              {/* Admin Actions */}
+              <div className="border-t pt-4">
+                <h3 className="font-bold text-lg mb-3">Thao tác quản lý</h3>
+                <div className="flex gap-3 flex-wrap">
+                  {selectedBooking.status === 'Pending' && (
+                    <button
+                      onClick={() => {
+                        handleUpdateStatus(selectedBooking.id, 'Confirmed');
+                        setShowDetailModal(false);
+                      }}
+                      disabled={actionLoading}
+                      className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <CheckCircle size={18} />
+                      Xác nhận booking
+                    </button>
+                  )}
+                  {selectedBooking.status === 'Confirmed' && (
+                    <button
+                      onClick={() => {
+                        handleUpdateStatus(selectedBooking.id, 'Completed');
+                        setShowDetailModal(false);
+                      }}
+                      disabled={actionLoading}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <CheckCircle size={18} />
+                      Hoàn thành
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Bạn có chắc chắn muốn xóa booking này?')) {
+                        handleDeleteBooking(selectedBooking.id);
+                        setShowDetailModal(false);
+                      }
+                    }}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Trash2 size={18} />
+                    Xóa booking
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -618,4 +807,4 @@ const BookingManagement = () => {
   );
 };
 
-export default BookingManagement;
+export default BookingManagement
