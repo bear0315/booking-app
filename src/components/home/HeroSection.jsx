@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, Calendar, Users, Search, ArrowDownUp } from 'lucide-react';
 
 const HeroSection = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     destination: '',
     departDate: '',
@@ -11,7 +13,14 @@ const HeroSection = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Tìm kiếm tour:', formData);
+    // Navigate to tours page with search params
+    const params = new URLSearchParams();
+    if (formData.destination) params.append('destination', formData.destination);
+    if (formData.departDate) params.append('departDate', formData.departDate);
+    if (formData.returnDate) params.append('returnDate', formData.returnDate);
+    if (formData.guests) params.append('guests', formData.guests);
+    
+    navigate(`/tours?${params.toString()}`);
   };
 
   return (

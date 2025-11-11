@@ -1,68 +1,54 @@
-import React, { useState } from 'react';
-import { MapPin, Star, DollarSign, Compass, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { destinationService } from '../../services/destinationService';
+import { MapPin, Star, DollarSign, Compass, ChevronLeft, ChevronRight, Loader } from 'lucide-react';
 
 const DestinationsSection = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [destinations, setDestinations] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const destinations = [
-    {
-      id: 1,
-      name: "Đà Lạt",
-      image: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800&q=80",
-      rating: 4.5,
-      reviews: 2500,
-      startPrice: 50,
-      tours: 35
-    },
-    {
-      id: 2,
-      name: "Hạ Long",
-      image: "https://images.unsplash.com/photo-1528127269322-539801943592?w=800&q=80",
-      rating: 5.0,
-      reviews: 2500,
-      startPrice: 70,
-      tours: 25
-    },
-    {
-      id: 3,
-      name: "Phú Quốc",
-      image: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80",
-      rating: 4.5,
-      reviews: 2500,
-      startPrice: 47,
-      tours: 28
-    },
-    {
-      id: 4,
-      name: "Sa Pa",
-      image: "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800&q=80",
-      rating: 5.0,
-      reviews: 2500,
-      startPrice: 60,
-      tours: 33
-    },
-    {
-      id: 5,
-      name: "Đà Nẵng",
-      image: "https://images.unsplash.com/photo-1583573607873-f04b1e5c2a8e?w=800&q=80",
-      rating: 4.5,
-      reviews: 2500,
-      startPrice: 55,
-      tours: 30
-    },
-    {
-      id: 6,
-      name: "Nha Trang",
-      image: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80",
-      rating: 5.0,
-      reviews: 2500,
-      startPrice: 65,
-      tours: 40
+  useEffect(() => {
+    fetchDestinations();
+  }, []);
+
+  const fetchDestinations = async () => {
+    setLoading(true);
+    try {
+      // Get featured destinations first, then fallback to popular
+      let response = await destinationService.getFeaturedDestinations(6);
+      if (!Array.isArray(response) || response.length === 0) {
+        response = await destinationService.getPopularDestinations(6);
+      }
+      if (!Array.isArray(response) || response.length === 0) {
+        response = await destinationService.getActiveDestinations();
+      }
+      
+      if (Array.isArray(response)) {
+        setDestinations(response.slice(0, 6)); // Limit to 6
+      } else if (response.data && Array.isArray(response.data)) {
+        setDestinations(response.data.slice(0, 6));
+      }
+    } catch (error) {
+      console.error('Error fetching destinations:', error);
+      setDestinations([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
 
   const itemsPerView = 4;
   const maxIndex = Math.max(0, destinations.length - itemsPerView);
+  
+  // Update maxIndex when destinations change
+  useEffect(() => {
+    if (destinations.length > 0) {
+      const newMaxIndex = Math.max(0, destinations.length - itemsPerView);
+      if (currentIndex > newMaxIndex) {
+        setCurrentIndex(newMaxIndex);
+      }
+    }
+  }, [destinations.length]);
 
   const nextSlide = () => {
     setCurrentIndex((prev) => Math.min(prev + 1, maxIndex));
@@ -116,12 +102,21 @@ const DestinationsSection = () => {
           </button>
 
           {/* Destinations Grid */}
-          <div className="overflow-hidden px-2">
-            <div 
-              className="flex gap-6 transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * (100 / itemsPerView + 1.5)}%)` }}
-            >
-              {destinations.map((destination) => (
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader className="animate-spin text-cyan-500" size={48} />
+            </div>
+          ) : destinations.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-gray-500 text-lg">Không có điểm đến nào</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden px-2">
+              <div 
+                className="flex gap-6 transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${currentIndex * (100 / itemsPerView + 1.5)}%)` }}
+              >
+                {destinations.map((destination) => (
                 <div
                   key={destination.id}
                   className="flex-shrink-0 w-[calc(25%-18px)] min-w-[280px]"
@@ -137,7 +132,7 @@ const DestinationsSection = () => {
                         }}
                       >
                         <img
-                          src={destination.image}
+                          src={destination.imageUrl || destination.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80'}
                           alt={destination.name}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         />
@@ -161,10 +156,10 @@ const DestinationsSection = () => {
                       <div className="flex items-center justify-center gap-2 mb-3">
                         <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1.5 rounded-full">
                           <Star size={16} className="fill-yellow-400 text-yellow-400" />
-                          <span className="font-bold text-yellow-600">{destination.rating}</span>
+                          <span className="font-bold text-yellow-600">{destination.averageRating?.toFixed(1) || destination.rating || '0'}</span>
                         </div>
                         <span className="text-sm text-gray-600">
-                          ({destination.reviews.toLocaleString('vi-VN')} Đánh giá)
+                          ({(destination.totalReviews || destination.reviews || 0).toLocaleString('vi-VN')} Đánh giá)
                         </span>
                       </div>
 
@@ -172,19 +167,25 @@ const DestinationsSection = () => {
                       <div className="flex items-center justify-center gap-6 text-sm">
                         <div className="flex items-center gap-2 text-gray-700">
                           <DollarSign size={18} className="text-cyan-500" />
-                          <span>Từ <span className="font-bold">${destination.startPrice}</span></span>
+                          <span>Từ <span className="font-bold">
+                            {new Intl.NumberFormat('vi-VN', {
+                              style: 'currency',
+                              currency: 'VND'
+                            }).format(destination.startingPrice || destination.startPrice || 0)}
+                          </span></span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-700">
                           <MapPin size={18} className="text-cyan-500" />
-                          <span className="font-bold">{destination.tours}</span> Tour
+                          <span className="font-bold">{destination.tourCount || destination.tours || 0}</span> Tour
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Dots Indicator */}
           <div className="flex justify-center gap-2 mt-12">

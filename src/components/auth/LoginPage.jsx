@@ -1,32 +1,23 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasAdminAccess } from '../../utils/roleUtils';
 import { 
   User, 
   Lock, 
   Mail, 
   Eye, 
   EyeOff,
-  LayoutDashboard,
-  Users,
-  MapPin,
-  ShoppingBag,
-  Settings,
-  LogOut,
-  Bell,
-  Search,
-  Plus,
-  TrendingUp,
-  DollarSign,
-  Calendar,
-  Menu,
-  X,
-  Edit,
-  Trash2,
-  MoreVertical
+  LayoutDashboard
 } from 'lucide-react';
 
-const LoginPage = ({ onLogin }) => {
+const LoginPage = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -34,10 +25,50 @@ const LoginPage = ({ onLogin }) => {
     confirmPassword: ''
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.email && formData.password) {
-      onLogin();
+    setError('');
+
+    if (isLogin) {
+      // Login
+      if (!formData.email || !formData.password) {
+        setError('Vui lòng điền đầy đủ email và mật khẩu');
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const result = await login(formData.email, formData.password);
+        if (result.success) {
+          // Get role from multiple possible sources
+          const userRole = result.user?.role || 
+                          result.data?.user?.role || 
+                          result.data?.data?.role ||
+                          result.data?.role;
+          
+          console.log('Login successful - User role:', userRole);
+          console.log('Full result:', result);
+          console.log('User object:', result.user);
+          
+          // Check role and redirect accordingly
+          // Role can be: Admin, Manager, Staff, Guide, Customer (from UserRole enum)
+          // Can be string ('Admin') or number (4)
+          if (hasAdminAccess(userRole)) {
+            navigate('/admin');
+          } else {
+            navigate('/');
+          }
+        } else {
+          setError(result.message || 'Đăng nhập thất bại');
+        }
+      } catch (err) {
+        setError(err.message || 'Đã xảy ra lỗi khi đăng nhập');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Sign up - TODO: Implement registration API when available
+      setError('Chức năng đăng ký chưa được triển khai');
     }
   };
 
@@ -59,6 +90,11 @@ const LoginPage = ({ onLogin }) => {
 
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
               <div>
@@ -149,9 +185,12 @@ const LoginPage = ({ onLogin }) => {
 
             <button 
               type="submit"
-              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all transform hover:scale-[1.02]"
+              disabled={isLoading}
+              className={`w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all transform hover:scale-[1.02] ${
+                isLoading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              {isLogin ? 'Sign In' : 'Sign Up'}
+              {isLoading ? 'Đang xử lý...' : (isLogin ? 'Đăng nhập' : 'Đăng ký')}
             </button>
           </form>
 

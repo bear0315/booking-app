@@ -1,5 +1,6 @@
 import './index.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
 import Header from './components/common/Header';
 import Footer from './components/common/Footer';
 
@@ -11,12 +12,15 @@ import CheckoutPage from './components/checkout/CheckoutPage';
 import BookingHistoryPage from './components/pages/BookingHistoryPage'; 
 import LoginPage from './components/auth/LoginPage';
 import AdminPage from './components/pages/AdminPage';
+import PaymentSuccessPage from './components/pages/PaymentSuccessPage';
+import PaymentFailurePage from './components/pages/PaymentFailurePage';
 
 const App = () => {
   return (
-    <Router>
-      <div className="min-h-screen bg-white">
-        <Routes>
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-white">
+          <Routes>
           {/* Trang chủ */}
           <Route path="/" element={
             <>
@@ -67,9 +71,15 @@ const App = () => {
 
           {/* Admin */}
           <Route path="/admin" element={<AdminPage />} />
+
+          {/* Payment Pages */}
+          <Route path="/payment/success" element={<PaymentSuccessPage />} />
+          <Route path="/payment/failure" element={<PaymentFailurePage />} />
+          <Route path="/payment/error" element={<PaymentFailurePage />} />
         </Routes>
       </div>
     </Router>
+    </AuthProvider>
   );
 };
 

@@ -1,146 +1,97 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, Clock, Heart, ArrowRight } from 'lucide-react';
+import { tourService } from '../../services/tourService';
+import { favoriteService } from '../../services/favoriteService';
+import { useAuth } from '../../contexts/AuthContext';
+import { MapPin, Star, Clock, Heart, ArrowRight, Loader } from 'lucide-react';
 
 const PopularTours = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [activeFilter, setActiveFilter] = useState('all');
   const [likedTours, setLikedTours] = useState([]);
+  const [tours, setTours] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const filters = [
     { id: 'all', label: 'Tất cả Tour' },
-    { id: 'historical', label: 'Lịch sử' },
-    { id: 'weekend', label: 'Cuối tuần' },
-    { id: 'special', label: 'Đặc biệt' },
-    { id: 'holiday', label: 'Kỳ nghỉ' }
+    { id: 'featured', label: 'Nổi bật' },
+    { id: 'popular', label: 'Phổ biến' }
   ];
 
-  const tours = [
-    {
-      id: 1,
-      title: "Tour Lịch Sử Canada",
-      category: "historical",
-      image: "https://images.unsplash.com/photo-1503891617560-5b8c2e28cbf6?w=800&q=80",
-      location: "25/B Milford Road, New York",
-      rating: 5.0,
-      reviews: 2500,
-      duration: "5 ngày 4 đêm",
-      places: 10,
-      price: 500,
-      badge: "25% GIẢM",
-      featured: false
-    },
-    {
-      id: 2,
-      title: "Tour Cuối Tuần Canada",
-      category: "weekend",
-      image: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=80",
-      location: "25/B Milford Road, New York",
-      rating: 5.0,
-      reviews: 2500,
-      duration: "5 ngày 4 đêm",
-      places: 10,
-      price: 500,
-      badge: null,
-      featured: false
-    },
-    {
-      id: 3,
-      title: "Tour Đặc Biệt Canada",
-      category: "special",
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-      location: "25/B Milford Road, New York",
-      rating: 5.0,
-      reviews: 2500,
-      duration: "5 ngày 4 đêm",
-      places: 10,
-      price: 500,
-      badge: null,
-      featured: false
-    },
-    {
-      id: 4,
-      title: "Tour Kỳ Nghỉ Canada",
-      category: "holiday",
-      image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80",
-      location: "25/B Milford Road, New York",
-      rating: 5.0,
-      reviews: 2500,
-      duration: "5 ngày 4 đêm",
-      places: 10,
-      price: 500,
-      badge: null,
-      featured: false
-    },
-    {
-      id: 5,
-      title: "Tour Mạo Hiểm Núi Cao",
-      category: "special",
-      image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80",
-      location: "25/B Milford Road, New York",
-      rating: 5.0,
-      reviews: 2500,
-      duration: "5 ngày 4 đêm",
-      places: 10,
-      price: 500,
-      badge: null,
-      featured: true
-    },
-    {
-      id: 6,
-      title: "Tour Khám Phá Biển",
-      category: "weekend",
-      image: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80",
-      location: "25/B Milford Road, New York",
-      rating: 5.0,
-      reviews: 2500,
-      duration: "5 ngày 4 đêm",
-      places: 10,
-      price: 500,
-      badge: null,
-      featured: false
-    },
-    {
-      id: 7,
-      title: "Tour Thành Phổ Cổ",
-      category: "historical",
-      image: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&q=80",
-      location: "25/B Milford Road, New York",
-      rating: 5.0,
-      reviews: 2500,
-      duration: "5 ngày 4 đêm",
-      places: 10,
-      price: 500,
-      badge: null,
-      featured: false
-    },
-    {
-      id: 8,
-      title: "Tour Núi Non Hùng Vĩ",
-      category: "holiday",
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-      location: "25/B Milford Road, New York",
-      rating: 5.0,
-      reviews: 2500,
-      duration: "5 ngày 4 đêm",
-      places: 10,
-      price: 500,
-      badge: "25% GIẢM",
-      featured: false
+  useEffect(() => {
+    fetchTours();
+  }, [activeFilter]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchFavorites();
     }
-  ];
+  }, [isAuthenticated]);
 
-  const filteredTours = activeFilter === 'all' 
-    ? tours 
-    : tours.filter(tour => tour.category === activeFilter);
-
-  const toggleLike = (tourId) => {
-    setLikedTours(prev => 
-      prev.includes(tourId) 
-        ? prev.filter(id => id !== tourId)
-        : [...prev, tourId]
-    );
+  const fetchTours = async () => {
+    setLoading(true);
+    try {
+      let response;
+      if (activeFilter === 'featured') {
+        response = await tourService.getFeaturedTours(8);
+      } else if (activeFilter === 'popular') {
+        response = await tourService.getPopularTours(8);
+      } else {
+        // Get featured tours as default
+        response = await tourService.getFeaturedTours(8);
+      }
+      
+      if (Array.isArray(response)) {
+        setTours(response);
+      } else if (response.data && Array.isArray(response.data)) {
+        setTours(response.data);
+      } else {
+        // Fallback: try to get all tours
+        const allToursResponse = await tourService.getAllTours(1, 8);
+        if (allToursResponse.data && Array.isArray(allToursResponse.data)) {
+          setTours(allToursResponse.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching tours:', error);
+      setTours([]);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const fetchFavorites = async () => {
+    try {
+      const response = await favoriteService.getMyFavorites();
+      if (Array.isArray(response)) {
+        const favoriteIds = response.map(fav => fav.tourId);
+        setLikedTours(favoriteIds);
+      }
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
+
+  const toggleLike = async (tourId) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await favoriteService.toggleFavorite(tourId);
+      if (response.isFavorite) {
+        setLikedTours(prev => [...prev, tourId]);
+      } else {
+        setLikedTours(prev => prev.filter(id => id !== tourId));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  const filteredTours = tours;
 
   return (
     <section id="tours" className="py-20 px-4 bg-gradient-to-b from-white to-gray-50">
@@ -174,6 +125,15 @@ const PopularTours = () => {
         </div>
 
         {/* Tours Grid */}
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader className="animate-spin text-cyan-500" size={48} />
+          </div>
+        ) : filteredTours.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-gray-500 text-lg">Không có tour nào</p>
+          </div>
+        ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredTours.map((tour) => (
             <div 
@@ -183,20 +143,15 @@ const PopularTours = () => {
               {/* Image */}
               <div className="relative h-64 overflow-hidden">
                 <img 
-                  src={tour.image} 
-                  alt={tour.title}
+                  src={tour.imageUrl || tour.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80'} 
+                  alt={tour.name || tour.title}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
                 
                 {/* Badges */}
                 <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
-                  {tour.badge && (
-                    <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                      {tour.badge}
-                    </span>
-                  )}
-                  {tour.featured && (
-                    <span className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg ml-auto">
+                  {tour.isFeatured && (
+                    <span className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
                       NỔI BẬT
                     </span>
                   )}
@@ -218,14 +173,14 @@ const PopularTours = () => {
                 </button>
 
                 {/* Category Badge */}
+                {tour.category && (
                 <div className="absolute bottom-4 left-4">
                   <span className="bg-white/95 backdrop-blur-sm text-cyan-600 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
                     <MapPin size={14} />
-                    {tour.category === 'historical' ? 'Lịch sử' : 
-                     tour.category === 'weekend' ? 'Cuối tuần' :
-                     tour.category === 'special' ? 'Đặc biệt' : 'Kỳ nghỉ'}
+                      {tour.category}
                   </span>
                 </div>
+                )}
               </div>
 
               {/* Content */}
@@ -233,22 +188,25 @@ const PopularTours = () => {
                 {/* Location */}
                 <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                   <MapPin size={16} className="text-cyan-500" />
-                  <span className="truncate">{tour.location}</span>
+                  <span className="truncate">{tour.location || tour.destinationName || 'N/A'}</span>
                 </div>
 
                 {/* Title */}
-                <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-cyan-600 transition-colors line-clamp-2">
-                  {tour.title}
+                <h3 
+                  onClick={() => navigate(`/tour?id=${tour.id}`)}
+                  className="text-lg font-bold text-gray-900 mb-3 group-hover:text-cyan-600 transition-colors line-clamp-2 cursor-pointer"
+                >
+                  {tour.name || tour.title}
                 </h3>
 
                 {/* Rating */}
                 <div className="flex items-center gap-2 mb-3">
                   <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
                     <Star size={16} className="fill-yellow-400 text-yellow-400" />
-                    <span className="font-bold text-yellow-600">{tour.rating}</span>
+                    <span className="font-bold text-yellow-600">{tour.averageRating?.toFixed(1) || tour.rating || '0'}</span>
                   </div>
                   <span className="text-sm text-gray-500">
-                    Xuất sắc <span className="font-medium">({tour.reviews.toLocaleString('vi-VN')} Đánh giá)</span>
+                    <span className="font-medium">({(tour.totalReviews || tour.reviews || 0).toLocaleString('vi-VN')} Đánh giá)</span>
                   </span>
                 </div>
 
@@ -256,11 +214,11 @@ const PopularTours = () => {
                 <div className="flex items-center gap-4 text-sm text-gray-600 mb-4 pb-4 border-b border-gray-100">
                   <div className="flex items-center gap-1">
                     <Clock size={16} className="text-cyan-500" />
-                    <span>{tour.duration}</span>
+                    <span>{tour.duration || `${tour.durationDays} ngày`}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <MapPin size={16} className="text-cyan-500" />
-                    <span>{tour.places} Địa điểm</span>
+                    <span>Tối đa {tour.maxGuests || tour.places || 'N/A'} người</span>
                   </div>
                 </div>
 
@@ -269,11 +227,14 @@ const PopularTours = () => {
                   <div>
                     <span className="text-sm text-gray-500">Từ </span>
                     <span className="text-2xl font-bold text-red-500">
-                      ${tour.price}
+                      {new Intl.NumberFormat('vi-VN', {
+                        style: 'currency',
+                        currency: 'VND'
+                      }).format(tour.price || 0)}
                     </span>
                   </div>
                   <button 
-                    onClick={() => navigate(`/tour`)}
+                    onClick={() => navigate(`/tour?id=${tour.id}`)}
                     className="flex items-center gap-2 text-cyan-600 font-semibold hover:gap-3 transition-all group"
                   >
                     <span>Xem thêm</span>
@@ -284,6 +245,7 @@ const PopularTours = () => {
             </div>
           ))}
         </div>
+        )}
 
         {/* View More Button */}
         <div className="text-center mt-12">

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { bookingService } from '../../services/bookingService';
 import { 
   Calendar,
   MapPin,
@@ -16,27 +18,70 @@ import {
   Search,
   ChevronRight,
   Phone,
-  Mail
+  Mail,
+  Loader
 } from 'lucide-react';
 
 const BookingHistoryPage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
 
-  // Mock user data
-  const user = {
-    name: "Nguyễn Văn An",
-    email: "nguyenvanan@email.com",
-    phone: "+84 912 345 678",
-    avatar: "https://i.pravatar.cc/200?img=8",
-    memberSince: "2023",
-    totalBookings: 12,
-    totalSpent: 8500
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    fetchBookings();
+  }, [isAuthenticated, page, activeTab]);
+
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      const status = activeTab === 'all' ? null : 
+                     activeTab === 'confirmed' ? 'Confirmed' :
+                     activeTab === 'pending' ? 'Pending' :
+                     activeTab === 'completed' ? 'Completed' :
+                     activeTab === 'cancelled' ? 'Cancelled' : null;
+      
+      const response = await bookingService.getMyBookings(page, pageSize);
+      if (response.success && response.data) {
+        let filteredBookings = response.data;
+        
+        // Filter by status if not 'all'
+        if (status) {
+          filteredBookings = filteredBookings.filter(b => b.status === status);
+        }
+        
+        // Filter by search query
+        if (searchQuery) {
+          filteredBookings = filteredBookings.filter(b => 
+            (b.tourName && b.tourName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (b.tourLocation && b.tourLocation.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (b.bookingCode && b.bookingCode.toLowerCase().includes(searchQuery.toLowerCase()))
+          );
+        }
+        
+        setBookings(filteredBookings);
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mock booking history data
-  const bookings = [
+  useEffect(() => {
+    fetchBookings();
+  }, [searchQuery]);
+
+  // Mock booking history data (fallback)
+  const mockBookings = [
     {
       id: "BK001",
       tourId: 1,
@@ -138,40 +183,33 @@ const BookingHistoryPage = () => {
 
   const tabs = [
     { id: 'all', label: 'Tất cả', count: bookings.length },
-    { id: 'confirmed', label: 'Đã xác nhận', count: bookings.filter(b => b.status === 'confirmed').length },
-    { id: 'pending', label: 'Chờ xác nhận', count: bookings.filter(b => b.status === 'pending').length },
-    { id: 'completed', label: 'Đã hoàn thành', count: bookings.filter(b => b.status === 'completed').length },
-    { id: 'cancelled', label: 'Đã hủy', count: bookings.filter(b => b.status === 'cancelled').length }
+    { id: 'confirmed', label: 'Đã xác nhận', count: bookings.filter(b => b.status === 'Confirmed').length },
+    { id: 'pending', label: 'Chờ xác nhận', count: bookings.filter(b => b.status === 'Pending').length },
+    { id: 'completed', label: 'Đã hoàn thành', count: bookings.filter(b => b.status === 'Completed').length },
+    { id: 'cancelled', label: 'Đã hủy', count: bookings.filter(b => b.status === 'Cancelled').length }
   ];
-
-  const filteredBookings = bookings.filter(booking => {
-    const matchesTab = activeTab === 'all' || booking.status === activeTab;
-    const matchesSearch = booking.tourName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          booking.location.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      confirmed: { 
+      'Confirmed': { 
         bg: 'bg-blue-100', 
         text: 'text-blue-700', 
         icon: CheckCircle,
         label: 'Đã xác nhận'
       },
-      pending: { 
+      'Pending': { 
         bg: 'bg-yellow-100', 
         text: 'text-yellow-700', 
         icon: AlertCircle,
         label: 'Chờ xác nhận'
       },
-      completed: { 
+      'Completed': { 
         bg: 'bg-green-100', 
         text: 'text-green-700', 
         icon: CheckCircle,
         label: 'Đã hoàn thành'
       },
-      cancelled: { 
+      'Cancelled': { 
         bg: 'bg-red-100', 
         text: 'text-red-700', 
         icon: XCircle,
@@ -179,7 +217,7 @@ const BookingHistoryPage = () => {
       }
     };
 
-    const config = statusConfig[status];
+    const config = statusConfig[status] || statusConfig['Pending'];
     const Icon = config.icon;
 
     return (
@@ -213,30 +251,33 @@ const BookingHistoryPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
               <div className="flex items-center gap-3">
-                <img 
-                  src={user.avatar} 
-                  alt={user.name}
-                  className="w-12 h-12 rounded-full border-2 border-white"
-                />
+                <div className="w-12 h-12 rounded-full border-2 border-white bg-white/20 flex items-center justify-center">
+                  <Users size={24} className="text-white" />
+                </div>
                 <div>
-                  <p className="font-semibold">{user.name}</p>
-                  <p className="text-xs text-cyan-100">Thành viên từ {user.memberSince}</p>
+                  <p className="font-semibold">{user?.name || user?.email || 'User'}</p>
+                  <p className="text-xs text-cyan-100">{user?.email}</p>
                 </div>
               </div>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
               <p className="text-cyan-100 text-sm mb-1">Tổng đặt tour</p>
-              <p className="text-2xl font-bold">{user.totalBookings}</p>
+              <p className="text-2xl font-bold">{bookings.length}</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
               <p className="text-cyan-100 text-sm mb-1">Tổng chi tiêu</p>
-              <p className="text-2xl font-bold">${user.totalSpent.toLocaleString()}</p>
+              <p className="text-2xl font-bold">
+                {new Intl.NumberFormat('vi-VN', {
+                  style: 'currency',
+                  currency: 'VND'
+                }).format(bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0))}
+              </p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
               <p className="text-cyan-100 text-sm mb-1">Liên hệ</p>
               <div className="flex items-center gap-2 text-sm">
                 <Phone size={14} />
-                <span>{user.phone}</span>
+                <span>{user?.phone || 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -286,7 +327,11 @@ const BookingHistoryPage = () => {
 
         {/* Bookings List */}
         <div className="space-y-4">
-          {filteredBookings.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader className="animate-spin text-cyan-500" size={48} />
+            </div>
+          ) : bookings.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm p-12 text-center">
               <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Calendar size={40} className="text-gray-400" />
@@ -304,7 +349,7 @@ const BookingHistoryPage = () => {
               </button>
             </div>
           ) : (
-            filteredBookings.map(booking => (
+            bookings.map(booking => (
               <div key={booking.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all overflow-hidden">
                 <div className="p-6">
                   <div className="flex flex-col lg:flex-row gap-6">

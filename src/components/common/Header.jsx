@@ -1,12 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Phone, Mail, User, Menu, X, Facebook, Instagram, Twitter, Linkedin, ChevronDown, BookOpen } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { hasAdminAccess } from '../../utils/roleUtils';
+import { Phone, Mail, User, Menu, X, Facebook, Instagram, Twitter, Linkedin, ChevronDown, BookOpen, LogOut, Settings } from 'lucide-react';
 
 const Header = () => {
+  const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setShowUserMenu(false);
+      navigate('/');
+      // Clear any remaining data
+      window.location.reload(); // Reload to ensure clean state
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if logout fails, clear local state
+      setShowUserMenu(false);
+      navigate('/');
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -74,20 +93,61 @@ const Header = () => {
               </div>
 
               {/* Auth Buttons */}
-              <Link
-                to="/login"
-                className="hidden md:flex items-center gap-2 text-white/80 hover:text-cyan-400 transition text-sm"
-              >
-                <User size={16} />
-                <span>Đăng nhập</span>
-              </Link>
-              <Link
-                to="/signup"
-                className="hidden md:flex items-center gap-2 text-white/80 hover:text-cyan-400 transition text-sm"
-              >
-                <User size={16} />
-                <span>Đăng ký</span>
-              </Link>
+              {!isAuthenticated ? (
+                <>
+                  <Link
+                    to="/login"
+                    className="hidden md:flex items-center gap-2 text-white/80 hover:text-cyan-400 transition text-sm"
+                  >
+                    <User size={16} />
+                    <span>Đăng nhập</span>
+                  </Link>
+                </>
+              ) : (
+                <div className="hidden md:block relative">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center gap-2 text-white/80 hover:text-cyan-400 transition text-sm"
+                  >
+                    <User size={16} />
+                    <span>{user?.name || user?.email || 'Tài khoản'}</span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-50">
+                      <div className="px-4 py-2 border-b border-gray-200">
+                        <p className="text-sm font-semibold text-gray-900">{user?.name || user?.email}</p>
+                        <p className="text-xs text-gray-500">{user?.email}</p>
+                      </div>
+                      {hasAdminAccess(user?.role) && (
+                        <Link
+                          to="/admin"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <Settings size={16} />
+                          <span>Quản trị</span>
+                        </Link>
+                      )}
+                      <Link
+                        to="/bookings"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <BookOpen size={16} />
+                        <span>Lịch sử đặt</span>
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut size={16} />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -234,18 +294,69 @@ const Header = () => {
               Liên hệ
             </a>
             <div className="mt-2 pt-2 border-t border-white/10">
-              <Link 
-                to="/login" 
-                className={`px-4 py-3 font-medium rounded-lg transition flex items-center gap-2 ${
-                  isScrolled 
-                    ? 'text-gray-700 hover:bg-gray-100' 
-                    : 'text-white/90 hover:bg-white/10'
-                }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <User size={18} />
-                Đăng nhập
-              </Link>
+              {!isAuthenticated ? (
+                <Link 
+                  to="/login" 
+                  className={`px-4 py-3 font-medium rounded-lg transition flex items-center gap-2 ${
+                    isScrolled 
+                      ? 'text-gray-700 hover:bg-gray-100' 
+                      : 'text-white/90 hover:bg-white/10'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <User size={18} />
+                  Đăng nhập
+                </Link>
+              ) : (
+                <>
+                  <div className={`px-4 py-3 ${
+                    isScrolled ? 'text-gray-700' : 'text-white/90'
+                  }`}>
+                    <p className="font-semibold">{user?.name || user?.email}</p>
+                    <p className="text-sm opacity-75">{user?.email}</p>
+                  </div>
+                  {hasAdminAccess(user?.role) && (
+                    <Link
+                      to="/admin"
+                      className={`px-4 py-3 font-medium rounded-lg transition flex items-center gap-2 ${
+                        isScrolled 
+                          ? 'text-gray-700 hover:bg-gray-100' 
+                          : 'text-white/90 hover:bg-white/10'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Settings size={18} />
+                      Quản trị
+                    </Link>
+                  )}
+                  <Link
+                    to="/bookings"
+                    className={`px-4 py-3 font-medium rounded-lg transition flex items-center gap-2 ${
+                      isScrolled 
+                        ? 'text-gray-700 hover:bg-gray-100' 
+                        : 'text-white/90 hover:bg-white/10'
+                    }`}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <BookOpen size={18} />
+                    Lịch sử đặt
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      setIsMenuOpen(false);
+                      await handleLogout();
+                    }}
+                    className={`w-full text-left px-4 py-3 font-medium rounded-lg transition flex items-center gap-2 ${
+                      isScrolled 
+                        ? 'text-red-600 hover:bg-red-50' 
+                        : 'text-red-300 hover:bg-red-500/20'
+                    }`}
+                  >
+                    <LogOut size={18} />
+                    Đăng xuất
+                  </button>
+                </>
+              )}
               <Link
                 to="/expert"
                 className="mx-4 mt-3 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-full text-center block hover:shadow-lg transition-all"

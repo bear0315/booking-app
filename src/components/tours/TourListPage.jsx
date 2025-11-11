@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { tourService } from '../../services/tourService';
+import { favoriteService } from '../../services/favoriteService';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   Search,
   SlidersHorizontal,
@@ -15,119 +18,128 @@ import {
   Award,
   X,
   Filter,
-  Heart
+  Heart,
+  Loader
 } from 'lucide-react';
 
 const TourListPage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [likedTours, setLikedTours] = useState([]);
+  const [tours, setTours] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [filters, setFilters] = useState({
+    minPrice: null,
+    maxPrice: null,
+    difficulty: [],
+    rating: null,
+    duration: []
+  });
 
-  const allTours = [
-    {
-      id: 1,
-      title: "Hành Trình Dưới Chân Matterhorn",
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-      price: 299,
-      duration: "5 ngày",
-      groupSize: "8-12 người",
-      location: "Thụy Sĩ",
-      rating: 5,
-      reviews: 128,
-      difficulty: "Trung bình",
-      featured: true
-    },
-    {
-      id: 2,
-      title: "Vòng Quanh Núi Mont Blanc",
-      image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80",
-      price: 499,
-      duration: "7 ngày",
-      groupSize: "6-10 người",
-      location: "Pháp",
-      rating: 5,
-      reviews: 94,
-      difficulty: "Thử thách",
-      featured: true
-    },
-    {
-      id: 3,
-      title: "Phiêu Lưu Dolomites",
-      image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80",
-      price: 399,
-      duration: "6 ngày",
-      groupSize: "8-14 người",
-      location: "Ý",
-      rating: 4,
-      reviews: 76,
-      difficulty: "Trung bình",
-      featured: false
-    },
-    {
-      id: 4,
-      title: "Khám Phá Dãy Alps Thụy Sĩ",
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-      price: 599,
-      duration: "8 ngày",
-      groupSize: "6-8 người",
-      location: "Thụy Sĩ",
-      rating: 5,
-      reviews: 112,
-      difficulty: "Thử thách",
-      featured: false
-    },
-    {
-      id: 5,
-      title: "Đường Mòn Núi Austria",
-      image: "https://images.unsplash.com/photo-1519904981063-b0cf448d479e?w=800&q=80",
-      price: 349,
-      duration: "5 ngày",
-      groupSize: "10-15 người",
-      location: "Áo",
-      rating: 4,
-      reviews: 89,
-      difficulty: "Dễ",
-      featured: false
-    },
-    {
-      id: 6,
-      title: "Hành Trình Khu Vực Jungfrau",
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-      price: 449,
-      duration: "6 ngày",
-      groupSize: "8-12 người",
-      location: "Thụy Sĩ",
-      rating: 5,
-      reviews: 156,
-      difficulty: "Trung bình",
-      featured: false
+  useEffect(() => {
+    fetchTours();
+  }, [page, searchQuery, filters]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchFavorites();
     }
-  ];
+  }, [isAuthenticated]);
 
-  const toggleLike = (tourId) => {
-    setLikedTours(prev =>
-      prev.includes(tourId)
-        ? prev.filter(id => id !== tourId)
-        : [...prev, tourId]
-    );
+  const fetchTours = async () => {
+    setLoading(true);
+    try {
+      const searchParams = {
+        keyword: searchQuery || null,
+        pageNumber: page,
+        pageSize: pageSize,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        minRating: filters.rating,
+        sortBy: 'created',
+        sortDesc: true
+      };
+      
+      const response = await tourService.searchTours(searchParams);
+      if (response.data) {
+        setTours(response.data);
+        setTotalPages(response.totalPages || 1);
+      } else {
+        // Fallback to getAllTours if search fails
+        const allToursResponse = await tourService.getAllTours(page, pageSize);
+        if (allToursResponse.data) {
+          setTours(allToursResponse.data);
+          setTotalPages(allToursResponse.totalPages || 1);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching tours:', error);
+      // Try to get featured tours as fallback
+      try {
+        const featuredResponse = await tourService.getFeaturedTours(10);
+        if (Array.isArray(featuredResponse)) {
+          setTours(featuredResponse);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback fetch failed:', fallbackError);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFavorites = async () => {
+    try {
+      const response = await favoriteService.getMyFavorites();
+      if (Array.isArray(response)) {
+        const favoriteIds = response.map(fav => fav.tourId);
+        setLikedTours(favoriteIds);
+      }
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
+
+  const toggleLike = async (tourId) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await favoriteService.toggleFavorite(tourId);
+      if (response.isFavorite) {
+        setLikedTours(prev => [...prev, tourId]);
+      } else {
+        setLikedTours(prev => prev.filter(id => id !== tourId));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
   };
 
   const handleBookTour = (tour) => {
-    // Điều hướng đến trang checkout và truyền dữ liệu tour
-    navigate('/checkout', {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    // Navigate to tour detail first, then to checkout
+    navigate(`/tour?id=${tour.id}`, {
       state: {
-        tourData: {
-          id: tour.id,
-          title: tour.title,
-          image: tour.image,
-          price: tour.price,
-          location: tour.location,
-          duration: tour.duration,
-          groupSize: tour.groupSize
-        }
+        tourData: tour
       }
     });
+  };
+
+  const handleSearch = () => {
+    setPage(1);
+    fetchTours();
   };
 
   return (
@@ -173,9 +185,13 @@ const TourListPage = () => {
                     className="w-full py-4 text-gray-800 text-lg focus:outline-none placeholder:text-gray-400 bg-transparent"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   />
                 </div>
-                <button className="bg-gradient-to-r from-gray-800 to-gray-900 text-white px-8 py-4 rounded-2xl font-bold hover:shadow-xl transition-all flex items-center gap-2 whitespace-nowrap">
+                <button 
+                  onClick={handleSearch}
+                  className="bg-gradient-to-r from-gray-800 to-gray-900 text-white px-8 py-4 rounded-2xl font-bold hover:shadow-xl transition-all flex items-center gap-2 whitespace-nowrap"
+                >
                   Tìm kiếm
                   <ChevronRight size={20} />
                 </button>
@@ -305,7 +321,9 @@ const TourListPage = () => {
           <div className="flex-1">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900">{allTours.length} tour hiện có</h2>
+                <h2 className="text-3xl font-bold text-gray-900">
+                  {loading ? 'Đang tải...' : `${tours.length} tour hiện có`}
+                </h2>
                 <p className="text-gray-600 mt-1">Hãy chọn hành trình phù hợp nhất với bạn</p>
               </div>
               <select className="px-5 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent font-medium text-gray-700">
@@ -317,8 +335,17 @@ const TourListPage = () => {
             </div>
 
             {/* Tour Cards */}
-            <div className="grid md:grid-cols-2 gap-6">
-              {allTours.map(tour => (
+            {loading ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader className="animate-spin text-cyan-500" size={48} />
+              </div>
+            ) : tours.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-gray-500 text-lg">Không tìm thấy tour nào</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-6">
+                {tours.map(tour => (
                 <div
                   key={tour.id}
                   className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
@@ -333,10 +360,13 @@ const TourListPage = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
                     <div className="absolute top-4 right-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-full font-bold text-lg shadow-lg">
-                      ${tour.price}
+                      {new Intl.NumberFormat('vi-VN', {
+                        style: 'currency',
+                        currency: 'VND'
+                      }).format(tour.price || 0)}
                     </div>
 
-                    {tour.featured && (
+                    {tour.isFeatured && (
                       <div className="absolute top-4 left-4 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
                         <TrendingUp size={14} />
                         NỔI BẬT
@@ -353,36 +383,39 @@ const TourListPage = () => {
                       <Heart size={18} className={likedTours.includes(tour.id) ? 'fill-current' : ''} />
                     </button>
 
-                    <div className="absolute bottom-4 left-4">
-                      <span className={`inline-block px-3 py-1.5 rounded-full text-xs font-bold shadow-lg ${tour.difficulty === 'Dễ' ? 'bg-gradient-to-r from-green-400 to-green-500 text-white' :
-                          tour.difficulty === 'Trung bình' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' :
+                    {tour.difficulty && (
+                      <div className="absolute bottom-4 left-4">
+                        <span className={`inline-block px-3 py-1.5 rounded-full text-xs font-bold shadow-lg ${
+                          tour.difficulty === 'Easy' || tour.difficulty === 'Dễ' ? 'bg-gradient-to-r from-green-400 to-green-500 text-white' :
+                          tour.difficulty === 'Medium' || tour.difficulty === 'Trung bình' ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white' :
                             'bg-gradient-to-r from-red-500 to-pink-500 text-white'
                         }`}>
-                        {tour.difficulty}
-                      </span>
-                    </div>
+                          {tour.difficulty}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-6">
                     <div className="flex items-center gap-2 text-gray-500 text-sm mb-3">
                       <MapPin size={16} className="text-cyan-500" />
-                      <span className="font-medium">{tour.location}</span>
+                      <span className="font-medium">{tour.location || tour.destinationName}</span>
                     </div>
 
                     <h3
-                      onClick={() => navigate('/tour')}
+                      onClick={() => navigate(`/tour?id=${tour.id}`)}
                       className="text-xl font-bold text-gray-900 mb-3 group-hover:text-cyan-600 transition-colors cursor-pointer hover:underline"
                     >
-                      {tour.title}
+                      {tour.name || tour.title}
                     </h3>
 
                     <div className="flex items-center gap-2 mb-4">
                       <div className="flex items-center gap-1 bg-yellow-50 px-2.5 py-1.5 rounded-lg">
                         {[...Array(5)].map((_, i) => (
-                          <Star key={i} size={14} className={i < tour.rating ? "fill-yellow-400 text-yellow-400" : "fill-gray-200 text-gray-200"} />
+                          <Star key={i} size={14} className={i < Math.floor(tour.averageRating || 0) ? "fill-yellow-400 text-yellow-400" : "fill-gray-200 text-gray-200"} />
                         ))}
                       </div>
-                      <span className="text-sm text-gray-600 font-medium">({tour.reviews})</span>
+                      <span className="text-sm text-gray-600 font-medium">({tour.totalReviews || 0})</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 mb-5 pb-5 border-b border-gray-100">
@@ -392,7 +425,7 @@ const TourListPage = () => {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Thời lượng</p>
-                          <p className="font-semibold text-gray-900">{tour.duration}</p>
+                          <p className="font-semibold text-gray-900">{tour.duration || `${tour.durationDays} ngày`}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
@@ -401,7 +434,7 @@ const TourListPage = () => {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">Nhóm</p>
-                          <p className="font-semibold text-gray-900">{tour.groupSize}</p>
+                          <p className="font-semibold text-gray-900">Tối đa {tour.maxGuests} người</p>
                         </div>
                       </div>
                     </div>
@@ -415,29 +448,45 @@ const TourListPage = () => {
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Pagination */}
-            <div className="flex justify-center items-center gap-2 mt-12">
-              <button className="px-5 py-3 border-2 border-gray-200 rounded-xl hover:border-cyan-500 hover:text-cyan-600 transition-colors font-medium">
-                Trước
-              </button>
-              {[1, 2, 3].map(page => (
-                <button
-                  key={page}
-                  className={`px-5 py-3 rounded-xl font-medium transition-all ${page === 1
-                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30'
-                      : 'border-2 border-gray-200 hover:border-cyan-500 hover:text-cyan-600'
-                    }`}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-12">
+                <button 
+                  onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                  className="px-5 py-3 border-2 border-gray-200 rounded-xl hover:border-cyan-500 hover:text-cyan-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {page}
+                  Trước
                 </button>
-              ))}
-              <button className="px-5 py-3 border-2 border-gray-200 rounded-xl hover:border-cyan-500 hover:text-cyan-600 transition-colors font-medium">
-                Sau
-              </button>
-            </div>
+                {[...Array(totalPages)].map((_, idx) => {
+                  const pageNum = idx + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`px-5 py-3 rounded-xl font-medium transition-all ${
+                        page === pageNum
+                          ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30'
+                          : 'border-2 border-gray-200 hover:border-cyan-500 hover:text-cyan-600'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button 
+                  onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                  className="px-5 py-3 border-2 border-gray-200 rounded-xl hover:border-cyan-500 hover:text-cyan-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Sau
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { bookingService } from '../../services/bookingService';
+import { paymentService } from '../../services/paymentService';
+import { tourService } from '../../services/tourService';
 import ContactForm from './ContactForm';
 import PaymentMethod from './PaymentMethod';
 import TermsAndConditions from './TermsAndConditions';
@@ -15,11 +19,16 @@ import {
   Check,
   Lock,
   ArrowLeft,
-  ChevronRight
+  ChevronRight,
+  Loader
 } from 'lucide-react';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, isAuthenticated } = useAuth();
+  const [tourData, setTourData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -28,22 +37,58 @@ const CheckoutPage = () => {
     address: '',
     specialRequests: ''
   });
+  const [bookingData, setBookingData] = useState({
+    tourDate: new Date().toISOString().split('T')[0],
+    numberOfGuests: 1,
+    guests: []
+  });
 
   const [errors, setErrors] = useState({});
   const [selectedMethod, setSelectedMethod] = useState('vnpay');
   const [agreed, setAgreed] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const tourData = {
-    title: "Hành trình Matterhorn",
-    image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
-    date: "15/06/2025",
-    guests: 2,
-    location: "Thụy Sĩ",
-    price: 299,
-    serviceFee: 29,
-    insurance: 15,
-    total: 642
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    // Get tour data from location state or URL params
+    const tourId = new URLSearchParams(location.search).get('tourId') || location.state?.tourData?.id;
+    
+    if (tourId) {
+      fetchTourData(tourId);
+    } else if (location.state?.tourData) {
+      setTourData(location.state.tourData);
+      setLoading(false);
+    } else {
+      navigate('/tours');
+    }
+
+    // Pre-fill user data if available
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        email: user.email || '',
+        firstName: user.name?.split(' ')[0] || '',
+        lastName: user.name?.split(' ').slice(1).join(' ') || ''
+      }));
+    }
+  }, [isAuthenticated, location, navigate, user]);
+
+  const fetchTourData = async (tourId) => {
+    try {
+      const response = await tourService.getTourById(tourId);
+      if (response) {
+        setTourData(response);
+      }
+    } catch (error) {
+      console.error('Error fetching tour:', error);
+      navigate('/tours');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const validateForm = () => {
@@ -79,20 +124,81 @@ const CheckoutPage = () => {
       return;
     }
 
+    if (!tourData) {
+      alert('Không tìm thấy thông tin tour');
+      return;
+    }
+
     setIsProcessing(true);
 
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      // Create booking
+      const bookingRequest = {
+        tourId: tourData.id,
+        tourDate: bookingData.tourDate,
+        numberOfGuests: bookingData.numberOfGuests,
+        customerName: `${formData.firstName} ${formData.lastName}`.trim(),
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
+        specialRequests: formData.specialRequests || null,
+        paymentMethod: selectedMethod === 'vnpay' ? 'VNPay' : 
+                      selectedMethod === 'paypal' ? 'PayPal' : 
+                      selectedMethod === 'creditcard' ? 'CreditCard' : 'Cash',
+        guests: bookingData.guests || []
+      };
 
-      if (selectedMethod === 'vnpay') {
-        alert('Đang chuyển hướng đến cổng thanh toán VNPay...');
-      } else if (selectedMethod === 'paypal') {
-        alert('Đang chuyển hướng đến PayPal...');
+      const bookingResponse = await bookingService.createBooking(bookingRequest);
+      
+      if (bookingResponse.success && bookingResponse.data) {
+        const bookingId = bookingResponse.data.id;
+
+        // If VNPay, create payment URL and redirect
+        if (selectedMethod === 'vnpay') {
+          const paymentResponse = await paymentService.createPaymentUrl(bookingId);
+          if (paymentResponse.success && paymentResponse.data) {
+            window.location.href = paymentResponse.data;
+          } else {
+            alert('Không thể tạo URL thanh toán. Vui lòng thử lại.');
+            setIsProcessing(false);
+          }
+        } else {
+          // For other payment methods, redirect to booking history
+          navigate('/bookings');
+        }
       } else {
-        alert('Đang xử lý thanh toán bằng thẻ tín dụng...');
+        alert(bookingResponse.message || 'Không thể tạo đặt tour. Vui lòng thử lại.');
+        setIsProcessing(false);
       }
-    }, 2000);
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert(error.message || 'Đã xảy ra lỗi. Vui lòng thử lại.');
+      setIsProcessing(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader className="animate-spin text-cyan-500" size={48} />
+      </div>
+    );
+  }
+
+  if (!tourData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500 mb-4">Không tìm thấy thông tin tour</p>
+          <button 
+            onClick={() => navigate('/tours')}
+            className="px-6 py-3 bg-cyan-500 text-white rounded-xl font-semibold hover:bg-cyan-600"
+          >
+            Quay lại danh sách tour
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -146,21 +252,32 @@ const CheckoutPage = () => {
             >
               {isProcessing ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <Loader className="animate-spin" size={20} />
                   Đang xử lý...
                 </>
               ) : (
                 <>
-                  Hoàn tất thanh toán - ${tourData.total}
+                  Hoàn tất thanh toán - {new Intl.NumberFormat('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND'
+                  }).format(tourData.price * bookingData.numberOfGuests || tourData.price)}
                   <ChevronRight size={20} />
                 </>
               )}
             </button>
           </div>
 
-          {}
+          {/* Order Summary */}
           <div className="lg:col-span-1">
-            <OrderSummary tourData={tourData} />
+            <OrderSummary 
+              tourData={{
+                ...tourData,
+                title: tourData.name || tourData.title,
+                price: tourData.price,
+                guests: bookingData.numberOfGuests,
+                total: (tourData.price || 0) * bookingData.numberOfGuests
+              }} 
+            />
           </div>
         </div>
       </div>
