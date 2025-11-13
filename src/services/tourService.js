@@ -186,4 +186,32 @@ export const tourService = {
       body: JSON.stringify(tourIds),
     });
   },
+
+    getAvailableGuides: async (tourId, tourDate) => {
+    const queryParams = new URLSearchParams({
+      tourDate: tourDate instanceof Date ? tourDate.toISOString() : tourDate
+    });
+    return await apiRequest(`/Tours/${tourId}/guides?${queryParams.toString()}`);
+  },
+
+  // Get guide detail
+  getGuideDetail: async (guideId) => {
+    return await apiRequest(`/Tours/guides/${guideId}`);
+  },
+
+  // Check guide availability
+  checkGuideAvailability: async (guideId, tourDate) => {
+    const queryParams = new URLSearchParams({
+      tourDate: tourDate instanceof Date ? tourDate.toISOString() : tourDate
+    });
+    return await apiRequest(`/Tours/guides/${guideId}/availability?${queryParams.toString()}`);
+  },
+
+  // Get default guide
+  getDefaultGuide: async (tourId, tourDate) => {
+    const queryParams = new URLSearchParams({
+      tourDate: tourDate instanceof Date ? tourDate.toISOString() : tourDate
+    });
+    return await apiRequest(`/Tours/${tourId}/default-guide?${queryParams.toString()}`);
+  },
 };

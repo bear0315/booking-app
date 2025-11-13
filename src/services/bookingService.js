@@ -35,6 +35,13 @@ export const bookingService = {
     return await apiRequest(`/Bookings/guide/${guideId}?page=${page}&pageSize=${pageSize}`);
   },
 
+  // ✅ NEW: Get available guides for booking
+  getAvailableGuides: async (tourId, tourDate) => {
+    return await apiRequest(
+      `/Bookings/available-guides?tourId=${tourId}&tourDate=${tourDate}`
+    );
+  },
+
   // Create booking
   createBooking: async (bookingData) => {
     return await apiRequest('/Bookings', {
@@ -74,4 +81,3 @@ export const bookingService = {
     });
   },
 };
-

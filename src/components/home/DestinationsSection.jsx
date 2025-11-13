@@ -14,7 +14,6 @@ const DestinationsSection = () => {
   const fetchDestinations = async () => {
     setLoading(true);
     try {
-      // Get featured destinations first, then fallback to popular
       let response = await destinationService.getFeaturedDestinations(6);
       console.log('Featured destinations response:', response);
       
@@ -27,7 +26,6 @@ const DestinationsSection = () => {
         console.log('Active destinations response:', response);
       }
       
-      // Ensure we have an array
       let destinationsData = [];
       if (Array.isArray(response)) {
         destinationsData = response;
@@ -55,7 +53,6 @@ const DestinationsSection = () => {
   const itemsPerView = 4;
   const maxIndex = Math.max(0, destinations.length - itemsPerView);
   
-  // Update maxIndex when destinations change
   useEffect(() => {
     if (destinations.length > 0) {
       const newMaxIndex = Math.max(0, destinations.length - itemsPerView);
@@ -132,7 +129,6 @@ const DestinationsSection = () => {
                 style={{ transform: `translateX(-${currentIndex * (100 / itemsPerView + 1.5)}%)` }}
               >
                 {destinations.map((destination, index) => {
-                  // Normalize destination data (handle both PascalCase and camelCase)
                   const destId = destination.id || destination.Id;
                   const destName = destination.name || destination.Name || 'Destination';
                   const destImage = destination.imageUrl || destination.ImageUrl || destination.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80';

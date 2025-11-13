@@ -17,11 +17,9 @@ const Header = () => {
       await logout();
       setShowUserMenu(false);
       navigate('/');
-      // Clear any remaining data
-      window.location.reload(); // Reload to ensure clean state
+      window.location.reload(); 
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if logout fails, clear local state
       setShowUserMenu(false);
       navigate('/');
     }

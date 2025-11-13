@@ -13,7 +13,6 @@ const HeroSection = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Navigate to tours page with search params
     const params = new URLSearchParams();
     if (formData.destination) params.append('destination', formData.destination);
     if (formData.departDate) params.append('departDate', formData.departDate);

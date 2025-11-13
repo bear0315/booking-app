@@ -4,10 +4,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { tourService } from '../../services/tourService';
 import { destinationService } from '../../services/destinationService';
 import { tagService } from '../../services/tagService';
-import { 
-  Plus, 
-  Search, 
-  Edit, 
+import GuideSelector from '../checkout/GuideSelector'; 
+
+
+import {
+  Plus,
+  Search,
+  Edit,
   Trash2,
   MapPin,
   Clock,
@@ -91,8 +94,8 @@ const getTypeLabel = (type) => {
 };
 
 const getCategoryLabel = (category) => {
-  const labels = ['Adventure', 'Cultural', 'Beach', 'Mountain', 'City', 'Nature', 'Wildlife', 
-    'Photography', 'Culinary', 'Wellness', 'Spiritual', 'Festival', 'Shopping', 'Cruise', 
+  const labels = ['Adventure', 'Cultural', 'Beach', 'Mountain', 'City', 'Nature', 'Wildlife',
+    'Photography', 'Culinary', 'Wellness', 'Spiritual', 'Festival', 'Shopping', 'Cruise',
     'Trekking', 'Diving', 'Family', 'Honeymoon', 'Backpacking', 'Ecotourism'];
   return labels[category] || 'Adventure';
 };
@@ -105,7 +108,7 @@ const getDifficultyLabel = (difficulty) => {
 export default function ToursManagement() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   // State
   const [tours, setTours] = useState([]);
   const [destinations, setDestinations] = useState([]);
@@ -119,7 +122,7 @@ export default function ToursManagement() {
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Filter state
   const [filters, setFilters] = useState({
     destinationId: '',
@@ -132,7 +135,7 @@ export default function ToursManagement() {
     maxDays: ''
   });
 
-  // Form state
+  // Form state - ĐÃ THÊM defaultGuideId
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -158,6 +161,7 @@ export default function ToursManagement() {
     includes: [],
     excludes: [],
     guideIds: [],
+    defaultGuideId: null, // ← ĐÃ THÊM
     tagIds: []
   });
 
@@ -175,9 +179,9 @@ export default function ToursManagement() {
   const fetchTours = async () => {
     try {
       setLoading(true);
-      
+
       const hasFilters = searchTerm || Object.values(filters).some(v => v !== '');
-      
+
       let response;
       if (hasFilters) {
         const searchParams = {
@@ -192,10 +196,10 @@ export default function ToursManagement() {
       } else {
         response = await tourService.getAllTours(currentPage, pageSize);
       }
-      
+
       let toursData = [];
       let pages = 1;
-      
+
       if (response.Items || response.items) {
         toursData = response.Items || response.items;
         pages = response.TotalPages || response.totalPages || 1;
@@ -206,7 +210,7 @@ export default function ToursManagement() {
         toursData = response;
         pages = 1;
       }
-      
+
       setTours(toursData);
       setTotalPages(pages);
     } catch (error) {
@@ -221,7 +225,7 @@ export default function ToursManagement() {
   const fetchDestinations = async () => {
     try {
       const data = await destinationService.getActiveDestinations();
-      
+
       let destData = [];
       if (Array.isArray(data)) {
         destData = data;
@@ -230,7 +234,7 @@ export default function ToursManagement() {
       } else if (data.Data || data.data) {
         destData = data.Data || data.data;
       }
-      
+
       setDestinations(destData);
     } catch (error) {
       console.error('Error fetching destinations:', error);
@@ -241,7 +245,7 @@ export default function ToursManagement() {
   const fetchTags = async () => {
     try {
       const data = await tagService.getAllTags();
-      
+
       let tagsData = [];
       if (Array.isArray(data)) {
         tagsData = data;
@@ -250,7 +254,7 @@ export default function ToursManagement() {
       } else if (data.Data || data.data) {
         tagsData = data.Data || data.data;
       }
-      
+
       setTags(tagsData);
     } catch (error) {
       console.error('Error fetching tags:', error);
@@ -287,39 +291,29 @@ export default function ToursManagement() {
     setCurrentPage(1);
   };
 
+  // CẬP NHẬT openModal - XỬ LÝ GUIDE KHI EDIT
   const openModal = async (mode, tour = null) => {
     setModalMode(mode);
     setSelectedTour(tour);
-    
+
     if (mode === 'edit' && tour) {
       try {
         setLoading(true);
-        
-        // Fetch full tour details by ID
         const tourId = tour.Id || tour.id;
-        console.log('Fetching full tour details for ID:', tourId);
         const fullTour = await tourService.getTourById(tourId);
-        
-        console.log('Full tour data:', fullTour);
-        
-        // Extract tag IDs - handle multiple possible formats
+
+        // Extract tag IDs
         let extractedTagIds = [];
         const tourTags = fullTour.Tags || fullTour.tags || [];
-        
         if (Array.isArray(tourTags)) {
-          extractedTagIds = tourTags.map(t => {
-            // Try different possible ID fields
-            return t.TagId || t.tagId || t.Id || t.id;
-          }).filter(id => id !== undefined && id !== null);
+          extractedTagIds = tourTags
+            .map(t => t.TagId || t.tagId || t.Id || t.id)
+            .filter(id => id !== undefined && id !== null);
         }
-        
-        console.log('Tour tags:', tourTags);
-        console.log('Extracted tag IDs:', extractedTagIds);
-        
-        // Extract and normalize images
+
+        // Extract images
         let extractedImages = [];
         const tourImages = fullTour.Images || fullTour.images || [];
-        
         if (Array.isArray(tourImages)) {
           extractedImages = tourImages.map((img, idx) => ({
             imageUrl: img.ImageUrl || img.imageUrl || '',
@@ -328,11 +322,28 @@ export default function ToursManagement() {
             displayOrder: img.DisplayOrder !== undefined ? img.DisplayOrder : (img.displayOrder !== undefined ? img.displayOrder : idx)
           })).filter(img => img.imageUrl && img.imageUrl.trim());
         }
-        
-        console.log('Tour images:', tourImages);
-        console.log('Extracted images:', extractedImages);
-        
-        // Map all tour data
+
+        // Extract guide IDs and default guide
+        let extractedGuideIds = [];
+        let extractedDefaultGuideId = null;
+        const tourGuides = fullTour.Guides || fullTour.guides || [];
+
+        if (Array.isArray(tourGuides)) {
+          extractedGuideIds = tourGuides
+            .map(g => g.GuideId || g.guideId || g.Id || g.id)
+            .filter(id => id !== undefined && id !== null);
+
+          const defaultGuide = tourGuides.find(g => g.IsDefault || g.isDefault);
+          if (defaultGuide) {
+            extractedDefaultGuideId = defaultGuide.GuideId || defaultGuide.guideId ||
+              defaultGuide.Id || defaultGuide.id;
+          }
+        }
+
+        console.log('Extracted guide IDs:', extractedGuideIds);
+        console.log('Default guide ID:', extractedDefaultGuideId);
+
+        // Map full tour
         const mappedTour = {
           id: fullTour.Id || fullTour.id,
           name: fullTour.Name || fullTour.name,
@@ -358,10 +369,11 @@ export default function ToursManagement() {
           itineraries: fullTour.Itineraries || fullTour.itineraries || [],
           includes: (fullTour.Includes || fullTour.includes || []).map(i => i.Description || i.description || i),
           excludes: (fullTour.Excludes || fullTour.excludes || []).map(e => e.Description || e.description || e),
-          guideIds: (fullTour.Guides || fullTour.guides || []).map(g => g.Id || g.id),
+          guideIds: extractedGuideIds,
+          defaultGuideId: extractedDefaultGuideId,
           tagIds: extractedTagIds
         };
-      
+
         setFormData({
           name: mappedTour.name || '',
           description: mappedTour.description || '',
@@ -387,11 +399,10 @@ export default function ToursManagement() {
           includes: mappedTour.includes,
           excludes: mappedTour.excludes,
           guideIds: mappedTour.guideIds,
+          defaultGuideId: mappedTour.defaultGuideId,
           tagIds: mappedTour.tagIds
         });
-        
-        console.log('Form data images set to:', extractedImages);
-        
+
       } catch (error) {
         console.error('Error fetching tour details:', error);
         alert('Failed to load tour details');
@@ -425,14 +436,16 @@ export default function ToursManagement() {
         includes: [],
         excludes: [],
         guideIds: [],
+        defaultGuideId: null,
         tagIds: []
       });
     }
-    
+
     setErrors({});
     setShowModal(true);
   };
 
+  // CẬP NHẬT closeModal - RESET GUIDE
   const closeModal = () => {
     setShowModal(false);
     setSelectedTour(null);
@@ -461,6 +474,7 @@ export default function ToursManagement() {
       includes: [],
       excludes: [],
       guideIds: [],
+      defaultGuideId: null,
       tagIds: []
     });
     setErrors({});
@@ -468,7 +482,7 @@ export default function ToursManagement() {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (!formData.destinationId) newErrors.destinationId = 'Destination is required';
@@ -477,23 +491,24 @@ export default function ToursManagement() {
     if (!formData.duration.trim()) newErrors.duration = 'Duration is required';
     if (!formData.durationDays || formData.durationDays <= 0) newErrors.durationDays = 'Valid duration days is required';
     if (!formData.maxGuests || formData.maxGuests <= 0) newErrors.maxGuests = 'Valid max guests is required';
-    
+
     if ([1, 14].includes(formData.type) && formData.difficulty === null) {
       newErrors.difficulty = 'Difficulty is required for Adventure/Trekking tours';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // CẬP NHẬT handleSubmit - GỬI GUIDE DATA
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     try {
       setLoading(true);
-      
+
       const submitData = {
         ...formData,
         price: parseFloat(formData.price),
@@ -511,11 +526,16 @@ export default function ToursManagement() {
         })).filter(img => img.imageUrl.trim()),
         includes: formData.includes.filter(i => i && i.trim()),
         excludes: formData.excludes.filter(e => e && e.trim()),
+        guideIds: formData.guideIds.filter(id => id),
+        defaultGuideId: formData.defaultGuideId,
         tagIds: formData.tagIds.filter(id => id)
       };
-      
-      console.log('Submitting tour with tagIds:', submitData.tagIds);
-      
+
+      console.log('Submitting tour with guides:', {
+        guideIds: submitData.guideIds,
+        defaultGuideId: submitData.defaultGuideId
+      });
+
       if (modalMode === 'create') {
         await tourService.createTour(submitData);
         alert('Tour created successfully!');
@@ -525,12 +545,12 @@ export default function ToursManagement() {
         await tourService.updateTour(tourId, submitData);
         alert('Tour updated successfully!');
       }
-      
+
       closeModal();
       fetchTours();
     } catch (error) {
       console.error('Error saving tour:', error);
-      
+
       let errorMessage = 'Failed to save tour';
       if (error.response?.data) {
         const errorData = error.response.data;
@@ -549,7 +569,7 @@ export default function ToursManagement() {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       alert(errorMessage);
     } finally {
       setLoading(false);
@@ -558,7 +578,7 @@ export default function ToursManagement() {
 
   const handleDelete = async () => {
     if (!selectedTour) return;
-    
+
     try {
       setLoading(true);
       const tourId = selectedTour.Id || selectedTour.id;
@@ -568,14 +588,14 @@ export default function ToursManagement() {
       fetchTours();
     } catch (error) {
       console.error('Error deleting tour:', error);
-      
+
       let errorMessage = 'Failed to delete tour';
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       alert(errorMessage);
     } finally {
       setLoading(false);
@@ -621,16 +641,13 @@ export default function ToursManagement() {
     setFormData(prev => {
       const currentTagIds = [...prev.tagIds];
       const index = currentTagIds.indexOf(tagId);
-      
+
       if (index > -1) {
-        // Remove tag
         currentTagIds.splice(index, 1);
       } else {
-        // Add tag
         currentTagIds.push(tagId);
       }
-      
-      console.log('Updated tagIds:', currentTagIds);
+
       return { ...prev, tagIds: currentTagIds };
     });
   };
@@ -853,8 +870,8 @@ export default function ToursManagement() {
             <Mountain className="mx-auto text-gray-400 mb-4" size={64} />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No tours found</h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm || Object.values(filters).some(v => v !== '') 
-                ? 'Try adjusting your search or filters' 
+              {searchTerm || Object.values(filters).some(v => v !== '')
+                ? 'Try adjusting your search or filters'
                 : 'Start by creating your first tour'}
             </p>
             <button
@@ -887,149 +904,145 @@ export default function ToursManagement() {
                 primaryImageUrl: tour.PrimaryImageUrl || tour.primaryImageUrl,
                 destinationName: tour.DestinationName || tour.destinationName
               };
-              
+
               return (
-              <div key={t.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                {/* Tour Image */}
-                <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center relative overflow-hidden">
-                  {/* Priority: images array first, then primaryImageUrl, then fallback */}
-                  {t.images && t.images.length > 0 && (t.images[0].ImageUrl || t.images[0].imageUrl) ? (
-                    <img 
-                      src={t.images[0].ImageUrl || t.images[0].imageUrl} 
-                      alt={t.name} 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        const fallback = e.target.parentElement.querySelector('.fallback-icon');
-                        if (fallback) fallback.style.display = 'flex';
+                <div key={t.id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                  {/* Tour Image */}
+                  <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center relative overflow-hidden">
+                    {t.images && t.images.length > 0 && (t.images[0].ImageUrl || t.images[0].imageUrl) ? (
+                      <img
+                        src={t.images[0].ImageUrl || t.images[0].imageUrl}
+                        alt={t.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const fallback = e.target.parentElement.querySelector('.fallback-icon');
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : t.primaryImageUrl ? (
+                      <img
+                        src={t.primaryImageUrl}
+                        alt={t.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const fallback = e.target.parentElement.querySelector('.fallback-icon');
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="fallback-icon absolute inset-0 flex items-center justify-center pointer-events-none"
+                      style={{
+                        display: (t.images && t.images.length > 0 && (t.images[0].ImageUrl || t.images[0].imageUrl)) || t.primaryImageUrl ? 'none' : 'flex'
                       }}
-                    />
-                  ) : t.primaryImageUrl ? (
-                    <img 
-                      src={t.primaryImageUrl} 
-                      alt={t.name} 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        const fallback = e.target.parentElement.querySelector('.fallback-icon');
-                        if (fallback) fallback.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  {/* Fallback Icon */}
-                  <div 
-                    className="fallback-icon absolute inset-0 flex items-center justify-center pointer-events-none" 
-                    style={{ 
-                      display: (t.images && t.images.length > 0 && (t.images[0].ImageUrl || t.images[0].imageUrl)) || t.primaryImageUrl ? 'none' : 'flex' 
-                    }}
-                  >
-                    <ImageIcon className="text-white opacity-50" size={48} />
-                  </div>
-                  {/* Featured Badge */}
-                  {t.isFeatured && (
-                    <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
-                      <Award size={12} />
-                      Featured
+                    >
+                      <ImageIcon className="text-white opacity-50" size={48} />
                     </div>
-                  )}
-                  {/* Status Badge */}
-                  <div className="absolute top-2 left-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold shadow-lg ${getStatusBadge(t.status).class}`}>
-                      {getStatusBadge(t.status).label}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Tour Info */}
-                <div className="p-4">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">{t.name}</h3>
-                  
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                    <MapPin size={16} />
-                    <span className="line-clamp-1">{t.location}</span>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                    <div className="flex items-center gap-1">
-                      <Clock size={16} />
-                      <span>{t.durationDays} days</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users size={16} />
-                      <span>{t.maxGuests} guests</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1">
-                      <Star className="text-yellow-500 fill-yellow-500" size={16} />
-                      <span className="font-semibold">{t.averageRating?.toFixed(1) || '0.0'}</span>
-                      <span className="text-sm text-gray-600">({t.totalReviews || 0})</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-blue-600 font-bold">
-                      <DollarSign size={18} />
-                      <span>{t.price?.toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 text-xs mb-3">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                      {getTypeLabel(t.type)}
-                    </span>
-                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded">
-                      {getCategoryLabel(t.category)}
-                    </span>
-                    {t.difficulty !== null && t.difficulty !== undefined && (
-                      <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded">
-                        {getDifficultyLabel(t.difficulty)}
-                      </span>
+                    {t.isFeatured && (
+                      <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+                        <Award size={12} />
+                        Featured
+                      </div>
                     )}
+                    <div className="absolute top-2 left-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold shadow-lg ${getStatusBadge(t.status).class}`}>
+                        {getStatusBadge(t.status).label}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-3 border-t">
-                    <button
-                      onClick={() => navigate(`/tours/${t.id}`)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
-                    >
-                      <Eye size={16} />
-                      View
-                    </button>
-                    <button
-                      onClick={() => openModal('edit', tour)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                    >
-                      <Edit size={16} />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => openModal('delete', tour)}
-                      className="flex items-center justify-center gap-1 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  {/* Tour Info */}
+                  <div className="p-4">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">{t.name}</h3>
 
-                  {/* Quick Actions */}
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => handleToggleFeatured(t.id)}
-                      className="flex-1 text-xs px-2 py-1 border rounded hover:bg-gray-50"
-                    >
-                      {t.isFeatured ? 'Unfeature' : 'Feature'}
-                    </button>
-                    <select
-                      value={t.status}
-                      onChange={(e) => handleUpdateStatus(t.id, parseInt(e.target.value))}
-                      className="flex-1 text-xs px-2 py-1 border rounded"
-                    >
-                      {Object.entries(TourStatus).map(([key, value]) => (
-                        <option key={`status-${t.id}-${value}`} value={value}>{key}</option>
-                      ))}
-                    </select>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                      <MapPin size={16} />
+                      <span className="line-clamp-1">{t.location}</span>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                      <div className="flex items-center gap-1">
+                        <Clock size={16} />
+                        <span>{t.durationDays} days</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users size={16} />
+                        <span>{t.maxGuests} guests</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-1">
+                        <Star className="text-yellow-500 fill-yellow-500" size={16} />
+                        <span className="font-semibold">{t.averageRating?.toFixed(1) || '0.0'}</span>
+                        <span className="text-sm text-gray-600">({t.totalReviews || 0})</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-blue-600 font-bold">
+                        <DollarSign size={18} />
+                        <span>{t.price?.toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 text-xs mb-3">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                        {getTypeLabel(t.type)}
+                      </span>
+                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded">
+                        {getCategoryLabel(t.category)}
+                      </span>
+                      {t.difficulty !== null && t.difficulty !== undefined && (
+                        <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded">
+                          {getDifficultyLabel(t.difficulty)}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-3 border-t">
+                      <button
+                        onClick={() => navigate(`/tours/${t.id}`)}
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+                      >
+                        <Eye size={16} />
+                        View
+                      </button>
+                      <button
+                        onClick={() => openModal('edit', tour)}
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                      >
+                        <Edit size={16} />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => openModal('delete', tour)}
+                        className="flex items-center justify-center gap-1 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => handleToggleFeatured(t.id)}
+                        className="flex-1 text-xs px-2 py-1 border rounded hover:bg-gray-50"
+                      >
+                        {t.isFeatured ? 'Unfeature' : 'Feature'}
+                      </button>
+                      <select
+                        value={t.status}
+                        onChange={(e) => handleUpdateStatus(t.id, parseInt(e.target.value))}
+                        className="flex-1 text-xs px-2 py-1 border rounded"
+                      >
+                        {Object.entries(TourStatus).map(([key, value]) => (
+                          <option key={`status-${t.id}-${value}`} value={value}>{key}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
               );
             })}
           </div>
@@ -1108,8 +1121,7 @@ export default function ToursManagement() {
                   {/* Basic Information */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Basic Information</h3>
-                    
-                    {/* Name */}
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tour Name <span className="text-red-500">*</span>
@@ -1123,7 +1135,6 @@ export default function ToursManagement() {
                       {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                     </div>
 
-                    {/* Description */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Description <span className="text-red-500">*</span>
@@ -1137,7 +1148,6 @@ export default function ToursManagement() {
                       {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
                     </div>
 
-                    {/* Destination and Location */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1172,7 +1182,6 @@ export default function ToursManagement() {
                       </div>
                     </div>
 
-                    {/* Price and Max Guests */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1204,7 +1213,6 @@ export default function ToursManagement() {
                       </div>
                     </div>
 
-                    {/* Duration */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1235,7 +1243,6 @@ export default function ToursManagement() {
                       </div>
                     </div>
 
-                    {/* Type, Category, Difficulty */}
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1285,7 +1292,6 @@ export default function ToursManagement() {
                       </div>
                     </div>
 
-                    {/* Status and Featured */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1329,7 +1335,7 @@ export default function ToursManagement() {
                         Add Image
                       </button>
                     </div>
-                    
+
                     {formData.images.length === 0 ? (
                       <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                         <ImageIcon className="mx-auto text-gray-400 mb-2" size={40} />
@@ -1347,10 +1353,9 @@ export default function ToursManagement() {
                         {formData.images.map((image, index) => (
                           <div key={index} className="flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                             <div className="flex-1 space-y-2">
-                              {/* Image Preview */}
                               {image.imageUrl && (
                                 <div className="relative h-24 bg-gray-200 rounded overflow-hidden">
-                                  <img 
+                                  <img
                                     src={image.imageUrl}
                                     alt={`Preview ${index + 1}`}
                                     className="w-full h-full object-cover"
@@ -1365,7 +1370,7 @@ export default function ToursManagement() {
                                   </div>
                                 </div>
                               )}
-                              
+
                               <input
                                 type="text"
                                 placeholder="Image URL *"
@@ -1416,7 +1421,7 @@ export default function ToursManagement() {
                         Add Item
                       </button>
                     </div>
-                    
+
                     {formData.includes.length === 0 ? (
                       <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
                         No items added yet
@@ -1458,7 +1463,7 @@ export default function ToursManagement() {
                         Add Item
                       </button>
                     </div>
-                    
+
                     {formData.excludes.length === 0 ? (
                       <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
                         No items added yet
@@ -1490,7 +1495,7 @@ export default function ToursManagement() {
                   {/* Tags Section */}
                   <div className="border-t pt-4 space-y-3">
                     <h3 className="text-lg font-semibold text-gray-900">Tags</h3>
-                    
+
                     {tags.length === 0 ? (
                       <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
                         No tags available. Please create tags first.
@@ -1501,17 +1506,16 @@ export default function ToursManagement() {
                           const tagId = tag.Id || tag.id;
                           const tagName = tag.Name || tag.name;
                           const isSelected = formData.tagIds.includes(tagId);
-                          
+
                           return (
                             <button
                               key={tagId}
                               type="button"
                               onClick={() => handleToggleTag(tagId)}
-                              className={`px-3 py-1.5 text-sm rounded-full transition-all ${
-                                isSelected 
-                                  ? 'bg-blue-600 text-white shadow-sm' 
+                              className={`px-3 py-1.5 text-sm rounded-full transition-all ${isSelected
+                                  ? 'bg-blue-600 text-white shadow-sm'
                                   : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
-                              }`}
+                                }`}
                             >
                               {tagName}
                             </button>
@@ -1524,11 +1528,54 @@ export default function ToursManagement() {
                     </p>
                   </div>
 
+                  {/* ========== GUIDES SECTION - ĐÃ THÊM HOÀN CHỈNH ========== */}
+                  <div className="border-t pt-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Tour Guides</h3>
+                        <p className="text-sm text-gray-600">
+                          Select guides who can lead this tour
+                        </p>
+                      </div>
+                      {formData.guideIds.length > 0 && (
+                        <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
+                          {formData.guideIds.length} guide{formData.guideIds.length !== 1 ? 's' : ''} selected
+                        </span>
+                      )}
+                    </div>
+
+                    <GuideSelector
+                      selectedGuideIds={formData.guideIds}
+                      defaultGuideId={formData.defaultGuideId}
+                      onGuidesChange={(newGuideIds) => {
+                        console.log('Guide IDs changed:', newGuideIds);
+                        setFormData(prev => ({
+                          ...prev,
+                          guideIds: newGuideIds
+                        }));
+                      }}
+                      onDefaultGuideChange={(newDefaultId) => {
+                        console.log('Default guide changed:', newDefaultId);
+                        setFormData(prev => ({
+                          ...prev,
+                          defaultGuideId: newDefaultId
+                        }));
+                      }}
+                    />
+
+                    {errors.guideIds && (
+                      <p className="text-red-500 text-sm flex items-center gap-1 mt-2">
+                        <AlertCircle size={16} />
+                        {errors.guideIds}
+                      </p>
+                    )}
+                  </div>
+                  {/* ========== END GUIDES SECTION ========== */}
+
                   {/* Additional Requirements */}
                   <div className="border-t pt-4 space-y-4">
                     <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
-                    
-                    {/* Age Requirements */}
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1559,7 +1606,6 @@ export default function ToursManagement() {
                       </div>
                     </div>
 
-                    {/* Physical Requirements */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Physical Requirements
@@ -1573,7 +1619,6 @@ export default function ToursManagement() {
                       />
                     </div>
 
-                    {/* Special Requirements */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Special Requirements
@@ -1591,7 +1636,7 @@ export default function ToursManagement() {
                   {/* SEO Section */}
                   <div className="border-t pt-4 space-y-4">
                     <h3 className="text-lg font-semibold text-gray-900">SEO Information (Optional)</h3>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Meta Title

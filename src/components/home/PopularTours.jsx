@@ -38,13 +38,11 @@ const PopularTours = () => {
       } else if (activeFilter === 'popular') {
         response = await tourService.getPopularTours(8);
       } else {
-        // Get featured tours as default
         response = await tourService.getFeaturedTours(8);
       }
       
       console.log('Tours response:', response);
       
-      // Handle different response structures
       let toursData = [];
       if (Array.isArray(response)) {
         toursData = response;
