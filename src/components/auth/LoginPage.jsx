@@ -40,21 +40,18 @@ const LoginPage = () => {
         const success = result.success || result.Success || false;
 
         if (success) {
-          const userRole = result.user?.role || 
-                           result.user?.Role ||
-                           result.data?.user?.role || 
-                           result.data?.User?.role ||
-                           result.data?.User?.Role ||
-                           result.data?.data?.role ||
-                           result.data?.role;
+          const userRole = result.user?.role || result.user?.Role;
           
-          console.log('Đăng nhập thành công - Vai trò người dùng:', userRole);
-
-          if (hasAdminAccess(userRole)) {
+          console.log('Đăng nhập thành công - Vai trò:', userRole);
+        
+          if (userRole === 'Admin') {
             navigate('/admin');
+          } else if (userRole === 'Guide') {
+            navigate('/guide'); 
           } else {
             navigate('/');
           }
+        
         } else {
           const errorMessage = result.message || result.Message || 'Đăng nhập thất bại';
           setError(errorMessage);
