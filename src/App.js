@@ -14,6 +14,7 @@ import LoginPage from './components/auth/LoginPage';
 import AdminPage from './components/pages/AdminPage';
 import PaymentSuccessPage from './components/pages/PaymentSuccessPage';
 import PaymentFailurePage from './components/pages/PaymentFailurePage';
+import TourDetail from './components/tours/TourDetail';
 
 const App = () => {
   return (
@@ -41,7 +42,7 @@ const App = () => {
               </>
             } />
 
-            {/* Chi tiết tour */}
+            {/* Chi tiết tour - Public */}
             <Route path="/tour" element={
               <>
                 <Header />
@@ -51,6 +52,22 @@ const App = () => {
                 <Footer />
               </>
             } />
+
+            {}
+            {}
+            <Route path="/admin/tours/:id" element={<TourDetail />} />
+            
+            {/* Hoặc nếu muốn có Header/Footer trong admin detail */}
+            {/* <Route path="/admin/tours/:id" element={
+              <>
+                <Header />
+                <main className="pt-[80px]">
+                  <TourDetail />
+                </main>
+                <Footer />
+              </>
+            } /> */}
+            {/* ========== END THÊM ========== */}
 
             {/* Checkout */}
             <Route path="/checkout" element={<CheckoutPage />} />
@@ -71,8 +88,9 @@ const App = () => {
 
             {/* Admin */}
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/*" element={<AdminPage />} /> {/* ← Cho nested routes */}
 
-            {/* Payment Pages - Updated paths to match backend */}
+            {/* Payment Pages */}
             <Route path="/payment-success" element={<PaymentSuccessPage />} />
             <Route path="/payment-failure" element={<PaymentFailurePage />} />
             <Route path="/payment-error" element={<PaymentFailurePage />} />

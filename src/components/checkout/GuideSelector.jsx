@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { guideService } from '../../services/guideService';
 
-// Guide Selector Component
 const GuideSelector = ({ 
   selectedGuideIds = [], 
   defaultGuideId = null,

@@ -35,11 +35,29 @@ export const bookingService = {
     return await apiRequest(`/Bookings/guide/${guideId}?page=${page}&pageSize=${pageSize}`);
   },
 
-  // ✅ NEW: Get available guides for booking
+  // Get available guides for booking
   getAvailableGuides: async (tourId, tourDate) => {
     return await apiRequest(
       `/Bookings/available-guides?tourId=${tourId}&tourDate=${tourDate}`
     );
+  },
+
+  // ✅ NEW: Assign guide to booking (Admin/Manager)
+  assignGuideToBooking: async (bookingId, guideId, reason = null) => {
+    return await apiRequest(`/Bookings/${bookingId}/assign-guide`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        guideId: guideId,
+        reason: reason
+      }),
+    });
+  },
+
+  // ✅ NEW: Remove guide from booking (Admin/Manager)
+  removeGuideFromBooking: async (bookingId) => {
+    return await apiRequest(`/Bookings/${bookingId}/guide`, {
+      method: 'DELETE',
+    });
   },
 
   // Create booking

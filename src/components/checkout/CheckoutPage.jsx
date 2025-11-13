@@ -37,7 +37,7 @@ const CheckoutPage = () => {
     guests: []
   });
 
-  // ✅ Hướng dẫn viên
+
   const [guides, setGuides] = useState([]);
   const [selectedGuideId, setSelectedGuideId] = useState(null);
   const [guidesLoading, setGuidesLoading] = useState(false);
@@ -87,7 +87,7 @@ const CheckoutPage = () => {
     }
   }, [isAuthenticated, location, navigate, user]);
 
-  // 🔁 Lấy hướng dẫn viên theo ngày
+ 
   useEffect(() => {
     const tourId = tourData?.id || tourData?.Id;
     if (tourId && bookingData.tourDate) {
@@ -249,7 +249,7 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          {/* ✅ Guide Selector tích hợp */}
+          {/*  Guide Selector  */}
           <GuideSelectorCheckout
             guides={guides}
             selectedGuideId={selectedGuideId}

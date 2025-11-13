@@ -20,7 +20,9 @@ import {
   Phone,
   Mail,
   Loader,
-  CreditCard
+  CreditCard,
+  UserCheck,
+  UserX
 } from 'lucide-react';
 
 const BookingHistoryPage = () => {
@@ -75,7 +77,18 @@ const BookingHistoryPage = () => {
         paymentMethod: booking.paymentMethod || booking.PaymentMethod || 'N/A',
         paymentTransactionId: booking.paymentTransactionId || booking.PaymentTransactionId,
         paymentDate: booking.paymentDate || booking.PaymentDate,
-        guide: booking.guideName || booking.GuideName || 'N/A',
+        
+        // ✅ THÊM THÔNG TIN GUIDE
+        guide: {
+          id: booking.guideId || booking.GuideId,
+          name: booking.guideName || booking.GuideName || 'Chưa gán',
+          avatar: booking.guideAvatar || booking.GuideAvatar,
+          phone: booking.guidePhone || booking.GuidePhone,
+          email: booking.guideEmail || booking.GuideEmail,
+          languages: booking.guideLanguages || booking.GuideLanguages,
+          rating: booking.guideRating || booking.GuideRating || 0
+        },
+        
         customerName: booking.customerName || booking.CustomerName,
         customerEmail: booking.customerEmail || booking.CustomerEmail,
         customerPhone: booking.customerPhone || booking.CustomerPhone,
@@ -85,6 +98,7 @@ const BookingHistoryPage = () => {
         review: booking.review || booking.Review
       }));
       
+      console.log('Mapped bookings with guides:', mappedBookings);
       setBookings(mappedBookings);
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -215,7 +229,6 @@ const BookingHistoryPage = () => {
 
   const handlePayNow = async (booking) => {
     try {
-      // Navigate to payment page or create payment URL
       navigate(`/checkout?bookingId=${booking.id}`);
     } catch (error) {
       console.error('Error initiating payment:', error);
@@ -422,18 +435,80 @@ const BookingHistoryPage = () => {
                         </div>
                       </div>
 
-                      {/* Guide & Payment */}
+                      {/* ========== GUIDE INFORMATION - ENHANCED ========== */}
+                      <div className="mb-4 pb-4 border-b border-gray-200">
+                        <p className="text-sm text-gray-500 mb-3">Hướng dẫn viên</p>
+                        
+                        {booking.guide.id ? (
+                          <div className="flex items-center gap-4 bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl">
+                            {/* Guide Avatar */}
+                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+                              {booking.guide.avatar ? (
+                                <img 
+                                  src={booking.guide.avatar} 
+                                  alt={booking.guide.name}
+                                  className="w-full h-full rounded-full object-cover"
+                                />
+                              ) : (
+                                booking.guide.name?.charAt(0) || 'G'
+                              )}
+                            </div>
+                            
+                            {/* Guide Info */}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-bold text-gray-900">{booking.guide.name}</h4>
+                                <UserCheck size={16} className="text-green-500" />
+                              </div>
+                              
+                              <div className="flex items-center gap-4 text-sm text-gray-600">
+                                {booking.guide.languages && (
+                                  <span className="flex items-center gap-1">
+                                    <span>🌐</span>
+                                    {booking.guide.languages}
+                                  </span>
+                                )}
+                                {booking.guide.rating > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <Star size={14} className="text-yellow-500 fill-yellow-500" />
+                                    <span className="font-semibold">{booking.guide.rating.toFixed(1)}</span>
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* Guide Contact */}
+                              {(booking.guide.phone || booking.guide.email) && (
+                                <div className="flex items-center gap-3 mt-2 text-xs text-gray-600">
+                                  {booking.guide.phone && (
+                                    <a href={`tel:${booking.guide.phone}`} className="flex items-center gap-1 hover:text-cyan-600">
+                                      <Phone size={12} />
+                                      {booking.guide.phone}
+                                    </a>
+                                  )}
+                                  {booking.guide.email && (
+                                    <a href={`mailto:${booking.guide.email}`} className="flex items-center gap-1 hover:text-cyan-600">
+                                      <Mail size={12} />
+                                      {booking.guide.email}
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl">
+                            <UserX size={20} className="text-gray-400" />
+                            <span className="text-gray-600 italic">Chưa gán hướng dẫn viên</span>
+                          </div>
+                        )}
+                      </div>
+                      {/* ========== END GUIDE INFORMATION ========== */}
+
+                      {/* Payment & Total */}
                       <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
-                        <div className="flex items-center gap-4 flex-wrap">
-                          <div>
-                            <p className="text-sm text-gray-500">Hướng dẫn viên</p>
-                            <p className="font-semibold text-gray-900">{booking.guide}</p>
-                          </div>
-                          <div className="h-8 w-px bg-gray-200"></div>
-                          <div>
-                            <p className="text-sm text-gray-500">Thanh toán qua</p>
-                            <p className="font-semibold text-gray-900">{booking.paymentMethod}</p>
-                          </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Thanh toán qua</p>
+                          <p className="font-semibold text-gray-900">{booking.paymentMethod}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-gray-500">Tổng giá</p>
@@ -460,6 +535,14 @@ const BookingHistoryPage = () => {
                         <div className="bg-red-50 rounded-lg p-4 mb-4">
                           <p className="text-sm font-semibold text-red-700 mb-1">Lý do hủy</p>
                           <p className="text-sm text-gray-700">{booking.cancelReason}</p>
+                        </div>
+                      )}
+
+                      {/* Special Requests */}
+                      {booking.specialRequests && (
+                        <div className="bg-yellow-50 rounded-lg p-4 mb-4">
+                          <p className="text-sm font-semibold text-yellow-700 mb-1">Yêu cầu đặc biệt</p>
+                          <p className="text-sm text-gray-700">{booking.specialRequests}</p>
                         </div>
                       )}
 
@@ -491,6 +574,17 @@ const BookingHistoryPage = () => {
                             <ChevronRight size={18} />
                             <span>Đặt lại</span>
                           </button>
+                        )}
+
+                        {/* Contact Guide */}
+                        {booking.guide.id && booking.guide.phone && (
+                          <a 
+                            href={`tel:${booking.guide.phone}`}
+                            className="flex items-center gap-2 px-4 py-2 border-2 border-blue-500 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-all"
+                          >
+                            <Phone size={18} />
+                            <span>Liên hệ guide</span>
+                          </a>
                         )}
                       </div>
                     </div>

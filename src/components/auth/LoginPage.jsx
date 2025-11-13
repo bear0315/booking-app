@@ -7,8 +7,7 @@ import {
   Lock, 
   Mail, 
   Eye, 
-  EyeOff,
-  LayoutDashboard
+  EyeOff
 } from 'lucide-react';
 
 const LoginPage = () => {
@@ -30,36 +29,27 @@ const LoginPage = () => {
     setError('');
 
     if (isLogin) {
-      // Login
       if (!formData.email || !formData.password) {
-        setError('Vui lòng điền đầy đủ email và mật khẩu');
+        setError('Vui lòng nhập đầy đủ email và mật khẩu');
         return;
       }
 
       setIsLoading(true);
       try {
         const result = await login(formData.email, formData.password);
-        
-        // Handle both lowercase and PascalCase response formats
         const success = result.success || result.Success || false;
-        
+
         if (success) {
-          // Get role from multiple possible sources (handle both cases)
           const userRole = result.user?.role || 
-                          result.user?.Role ||
-                          result.data?.user?.role || 
-                          result.data?.User?.role ||
-                          result.data?.User?.Role ||
-                          result.data?.data?.role ||
-                          result.data?.role;
+                           result.user?.Role ||
+                           result.data?.user?.role || 
+                           result.data?.User?.role ||
+                           result.data?.User?.Role ||
+                           result.data?.data?.role ||
+                           result.data?.role;
           
-          console.log('Login successful - User role:', userRole);
-          console.log('Full result:', result);
-          console.log('User object:', result.user);
-          
-          // Check role and redirect accordingly
-          // Role can be: Admin, Manager, Staff, Guide, Customer (from UserRole enum)
-          // Can be string ('Admin') or number (4)
+          console.log('Đăng nhập thành công - Vai trò người dùng:', userRole);
+
           if (hasAdminAccess(userRole)) {
             navigate('/admin');
           } else {
@@ -68,54 +58,61 @@ const LoginPage = () => {
         } else {
           const errorMessage = result.message || result.Message || 'Đăng nhập thất bại';
           setError(errorMessage);
-          console.error('Login failed:', errorMessage);
         }
       } catch (err) {
-        console.error('Login error:', err);
+        console.error('Lỗi đăng nhập:', err);
         setError(err.message || 'Đã xảy ra lỗi khi đăng nhập');
       } finally {
         setIsLoading(false);
       }
     } else {
-      // Sign up - TODO: Implement registration API when available
-      setError('Chức năng đăng ký chưa được triển khai');
+      setError('Chức năng đăng ký hiện chưa được triển khai');
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4">
-            <LayoutDashboard className="text-orange-500" size={32} />
+        {}
+        <div className="text-center mb-8 group transition-all duration-300">
+          <div className="inline-flex flex-col items-center justify-center space-y-3">
+            <img
+              src="https://res.cloudinary.com/dosyknq32/image/upload/v1761962915/VanVivu_lifxyr.jpg"
+              alt="Van Vi Vu Logo"
+              className="h-14 w-auto rounded-xl object-contain shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:brightness-110"
+            />
+            <span className="font-bold text-lg text-white tracking-wide group-hover:text-orange-400 transition-colors">
+              Van Vi Vu
+            </span>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
+
+          <h1 className="text-3xl font-bold text-white mt-6 mb-2">
+            {isLogin ? 'Chào mừng trở lại' : 'Tạo tài khoản mới'}
           </h1>
           <p className="text-orange-100">
-            {isLogin ? 'Login to manage your tours' : 'Sign up to get started'}
+            {isLogin ? 'Đăng nhập để quản lý tour của bạn' : 'Đăng ký để bắt đầu hành trình cùng chúng tôi'}
           </p>
         </div>
 
-        {/* Login Form */}
+        {}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
             </div>
           )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Full Name
+                  Họ và tên
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                   <input 
                     type="text"
-                    placeholder="John Doe"
+                    placeholder="Nguyễn Văn A"
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
@@ -126,7 +123,7 @@ const LoginPage = () => {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Address
+                Địa chỉ Email
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -142,7 +139,7 @@ const LoginPage = () => {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
+                Mật khẩu
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -166,7 +163,7 @@ const LoginPage = () => {
             {!isLogin && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Confirm Password
+                  Xác nhận mật khẩu
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -185,10 +182,10 @@ const LoginPage = () => {
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" className="accent-orange-500" />
-                  <span className="text-sm text-gray-600">Remember me</span>
+                  <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span>
                 </label>
                 <a href="#" className="text-sm text-orange-500 hover:underline">
-                  Forgot password?
+                  Quên mật khẩu?
                 </a>
               </div>
             )}
@@ -206,12 +203,12 @@ const LoginPage = () => {
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              {isLogin ? 'Chưa có tài khoản? ' : 'Đã có tài khoản? '}
               <button 
                 onClick={() => setIsLogin(!isLogin)}
                 className="text-orange-500 font-semibold hover:underline"
               >
-                {isLogin ? 'Sign Up' : 'Sign In'}
+                {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
               </button>
             </p>
           </div>
@@ -220,4 +217,5 @@ const LoginPage = () => {
     </div>
   );
 };
+
 export default LoginPage;

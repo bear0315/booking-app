@@ -11,26 +11,23 @@ import {
 } from 'lucide-react';
 import { guideService } from '../../services/guideService';
 
-// Guide Selector Component cho Checkout
 const GuideSelectorCheckout = ({ 
-  guides: externalGuides = null, // Guides từ props (nếu có)
-  selectedGuideId = null, // ID của guide được chọn
-  onSelectGuide = () => {}, // Callback khi chọn guide
-  loading: externalLoading = false, // Loading state từ props
-  error: externalError = null // Error từ props
+  guides: externalGuides = null, 
+  selectedGuideId = null, 
+  onSelectGuide = () => {},
+  loading: externalLoading = false, 
+  error: externalError = null 
 }) => {
   const [internalGuides, setInternalGuides] = useState([]);
   const [internalLoading, setInternalLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [internalError, setInternalError] = useState('');
 
-  // Sử dụng guides từ props hoặc fetch internal
   const guides = externalGuides || internalGuides;
   const loading = externalGuides !== null ? externalLoading : internalLoading;
   const error = externalGuides !== null ? externalError : internalError;
 
   useEffect(() => {
-    // Chỉ fetch nếu không có guides từ props
     if (externalGuides === null) {
       fetchGuides();
     } else {
@@ -65,7 +62,6 @@ const GuideSelectorCheckout = ({
   };
 
   const handleSelectGuide = (guideId) => {
-    // Toggle selection: nếu đang chọn thì bỏ chọn, nếu chưa thì chọn
     if (selectedGuideId === guideId) {
       onSelectGuide(null);
     } else {

@@ -4,8 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { tourService } from '../../services/tourService';
 import { destinationService } from '../../services/destinationService';
 import { tagService } from '../../services/tagService';
-import GuideSelector from '../checkout/GuideSelector'; 
-
+import GuideSelector from '../checkout/GuideSelector';
 
 import {
   Plus,
@@ -80,29 +79,29 @@ const TourDifficulty = {
 
 const getStatusBadge = (status) => {
   const badges = {
-    0: { label: 'Active', class: 'bg-green-100 text-green-800' },
-    1: { label: 'Inactive', class: 'bg-gray-100 text-gray-800' },
-    2: { label: 'Draft', class: 'bg-yellow-100 text-yellow-800' },
-    3: { label: 'Archived', class: 'bg-red-100 text-red-800' }
+    0: { label: 'Hoạt động', class: 'bg-green-100 text-green-800' },
+    1: { label: 'Không hoạt động', class: 'bg-gray-100 text-gray-800' },
+    2: { label: 'Bản nháp', class: 'bg-yellow-100 text-yellow-800' },
+    3: { label: 'Đã lưu trữ', class: 'bg-red-100 text-red-800' }
   };
   return badges[status] || badges[0];
 };
 
 const getTypeLabel = (type) => {
-  const labels = ['Standard', 'Adventure', 'Cultural', 'Culinary', 'Beach', 'City', 'Nature', 'Luxury'];
-  return labels[type] || 'Standard';
+  const labels = ['Tiêu chuẩn', 'Phiêu lưu', 'Văn hóa', 'Ẩm thực', 'Biển', 'Thành phố', 'Thiên nhiên', 'Cao cấp'];
+  return labels[type] || 'Tiêu chuẩn';
 };
 
 const getCategoryLabel = (category) => {
-  const labels = ['Adventure', 'Cultural', 'Beach', 'Mountain', 'City', 'Nature', 'Wildlife',
-    'Photography', 'Culinary', 'Wellness', 'Spiritual', 'Festival', 'Shopping', 'Cruise',
-    'Trekking', 'Diving', 'Family', 'Honeymoon', 'Backpacking', 'Ecotourism'];
-  return labels[category] || 'Adventure';
+  const labels = ['Phiêu lưu', 'Văn hóa', 'Biển', 'Núi', 'Thành phố', 'Thiên nhiên', 'Động vật hoang dã',
+    'Nhiếp ảnh', 'Ẩm thực', 'Sức khỏe', 'Tâm linh', 'Lễ hội', 'Mua sắm', 'Du thuyền',
+    'Trekking', 'Lặn biển', 'Gia đình', 'Tuần trăng mật', 'Du lịch balo', 'Du lịch sinh thái'];
+  return labels[category] || 'Phiêu lưu';
 };
 
 const getDifficultyLabel = (difficulty) => {
-  const labels = ['Easy', 'Moderate', 'Challenging', 'Expert'];
-  return labels[difficulty] || 'Easy';
+  const labels = ['Dễ', 'Trung bình', 'Khó', 'Chuyên gia'];
+  return labels[difficulty] || 'Dễ';
 };
 
 export default function ToursManagement() {
@@ -135,7 +134,7 @@ export default function ToursManagement() {
     maxDays: ''
   });
 
-  // Form state - ĐÃ THÊM defaultGuideId
+  // Form state
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -161,7 +160,7 @@ export default function ToursManagement() {
     includes: [],
     excludes: [],
     guideIds: [],
-    defaultGuideId: null, // ← ĐÃ THÊM
+    defaultGuideId: null,
     tagIds: []
   });
 
@@ -214,7 +213,7 @@ export default function ToursManagement() {
       setTours(toursData);
       setTotalPages(pages);
     } catch (error) {
-      console.error('Error fetching tours:', error);
+      console.error('Lỗi khi tải tour:', error);
       setTours([]);
       setTotalPages(1);
     } finally {
@@ -237,7 +236,7 @@ export default function ToursManagement() {
 
       setDestinations(destData);
     } catch (error) {
-      console.error('Error fetching destinations:', error);
+      console.error('Lỗi khi tải điểm đến:', error);
       setDestinations([]);
     }
   };
@@ -257,7 +256,7 @@ export default function ToursManagement() {
 
       setTags(tagsData);
     } catch (error) {
-      console.error('Error fetching tags:', error);
+      console.error('Lỗi khi tải thẻ tag:', error);
       setTags([]);
     }
   };
@@ -291,7 +290,6 @@ export default function ToursManagement() {
     setCurrentPage(1);
   };
 
-  // CẬP NHẬT openModal - XỬ LÝ GUIDE KHI EDIT
   const openModal = async (mode, tour = null) => {
     setModalMode(mode);
     setSelectedTour(tour);
@@ -340,8 +338,8 @@ export default function ToursManagement() {
           }
         }
 
-        console.log('Extracted guide IDs:', extractedGuideIds);
-        console.log('Default guide ID:', extractedDefaultGuideId);
+        console.log('ID hướng dẫn viên đã trích xuất:', extractedGuideIds);
+        console.log('ID hướng dẫn viên mặc định:', extractedDefaultGuideId);
 
         // Map full tour
         const mappedTour = {
@@ -404,8 +402,8 @@ export default function ToursManagement() {
         });
 
       } catch (error) {
-        console.error('Error fetching tour details:', error);
-        alert('Failed to load tour details');
+        console.error('Lỗi khi tải chi tiết tour:', error);
+        alert('Không thể tải chi tiết tour');
         return;
       } finally {
         setLoading(false);
@@ -445,7 +443,6 @@ export default function ToursManagement() {
     setShowModal(true);
   };
 
-  // CẬP NHẬT closeModal - RESET GUIDE
   const closeModal = () => {
     setShowModal(false);
     setSelectedTour(null);
@@ -483,24 +480,23 @@ export default function ToursManagement() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.description.trim()) newErrors.description = 'Description is required';
-    if (!formData.destinationId) newErrors.destinationId = 'Destination is required';
-    if (!formData.location.trim()) newErrors.location = 'Location is required';
-    if (!formData.price || formData.price <= 0) newErrors.price = 'Valid price is required';
-    if (!formData.duration.trim()) newErrors.duration = 'Duration is required';
-    if (!formData.durationDays || formData.durationDays <= 0) newErrors.durationDays = 'Valid duration days is required';
-    if (!formData.maxGuests || formData.maxGuests <= 0) newErrors.maxGuests = 'Valid max guests is required';
+    if (!formData.name.trim()) newErrors.name = 'Tên tour là bắt buộc';
+    if (!formData.description.trim()) newErrors.description = 'Mô tả là bắt buộc';
+    if (!formData.destinationId) newErrors.destinationId = 'Điểm đến là bắt buộc';
+    if (!formData.location.trim()) newErrors.location = 'Địa điểm là bắt buộc';
+    if (!formData.price || formData.price <= 0) newErrors.price = 'Giá hợp lệ là bắt buộc';
+    if (!formData.duration.trim()) newErrors.duration = 'Thời lượng là bắt buộc';
+    if (!formData.durationDays || formData.durationDays <= 0) newErrors.durationDays = 'Số ngày hợp lệ là bắt buộc';
+    if (!formData.maxGuests || formData.maxGuests <= 0) newErrors.maxGuests = 'Số khách tối đa hợp lệ là bắt buộc';
 
     if ([1, 14].includes(formData.type) && formData.difficulty === null) {
-      newErrors.difficulty = 'Difficulty is required for Adventure/Trekking tours';
+      newErrors.difficulty = 'Độ khó là bắt buộc cho tour Phiêu lưu/Trekking';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // CẬP NHẬT handleSubmit - GỬI GUIDE DATA
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -531,27 +527,27 @@ export default function ToursManagement() {
         tagIds: formData.tagIds.filter(id => id)
       };
 
-      console.log('Submitting tour with guides:', {
+      console.log('Gửi tour với hướng dẫn viên:', {
         guideIds: submitData.guideIds,
         defaultGuideId: submitData.defaultGuideId
       });
 
       if (modalMode === 'create') {
         await tourService.createTour(submitData);
-        alert('Tour created successfully!');
+        alert('Tạo tour thành công!');
       } else if (modalMode === 'edit') {
         const tourId = selectedTour.Id || selectedTour.id;
         submitData.id = tourId;
         await tourService.updateTour(tourId, submitData);
-        alert('Tour updated successfully!');
+        alert('Cập nhật tour thành công!');
       }
 
       closeModal();
       fetchTours();
     } catch (error) {
-      console.error('Error saving tour:', error);
+      console.error('Lỗi khi lưu tour:', error);
 
-      let errorMessage = 'Failed to save tour';
+      let errorMessage = 'Không thể lưu tour';
       if (error.response?.data) {
         const errorData = error.response.data;
         if (typeof errorData === 'string') {
@@ -564,7 +560,7 @@ export default function ToursManagement() {
             validationErrors[key.toLowerCase()] = errorData.errors[key][0];
           });
           setErrors(validationErrors);
-          errorMessage = 'Please fix validation errors';
+          errorMessage = 'Vui lòng sửa lỗi xác thực';
         }
       } else if (error.message) {
         errorMessage = error.message;
@@ -583,13 +579,13 @@ export default function ToursManagement() {
       setLoading(true);
       const tourId = selectedTour.Id || selectedTour.id;
       await tourService.deleteTour(tourId);
-      alert('Tour deleted successfully!');
+      alert('Xóa tour thành công!');
       closeModal();
       fetchTours();
     } catch (error) {
-      console.error('Error deleting tour:', error);
+      console.error('Lỗi khi xóa tour:', error);
 
-      let errorMessage = 'Failed to delete tour';
+      let errorMessage = 'Không thể xóa tour';
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
@@ -702,8 +698,8 @@ export default function ToursManagement() {
       await tourService.toggleFeatured(id);
       fetchTours();
     } catch (error) {
-      console.error('Error toggling featured:', error);
-      alert('Failed to update featured status');
+      console.error('Lỗi khi chuyển đổi nổi bật:', error);
+      alert('Không thể cập nhật trạng thái nổi bật');
     }
   };
 
@@ -712,8 +708,8 @@ export default function ToursManagement() {
       await tourService.updateStatus(id, status);
       fetchTours();
     } catch (error) {
-      console.error('Error updating status:', error);
-      alert('Failed to update status');
+      console.error('Lỗi khi cập nhật trạng thái:', error);
+      alert('Không thể cập nhật trạng thái');
     }
   };
 
@@ -724,15 +720,15 @@ export default function ToursManagement() {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Tours Management</h1>
-              <p className="text-gray-600 mt-1">Manage your tour listings</p>
+              <h1 className="text-3xl font-bold text-gray-900">Quản Lý Tour</h1>
+              <p className="text-gray-600 mt-1">Quản lý danh sách tour của bạn</p>
             </div>
             <button
               onClick={() => openModal('create')}
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus size={20} />
-              Add New Tour
+              Thêm Tour Mới
             </button>
           </div>
 
@@ -743,7 +739,7 @@ export default function ToursManagement() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="text"
-                  placeholder="Search tours by name..."
+                  placeholder="Tìm kiếm tour theo tên..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -755,13 +751,13 @@ export default function ToursManagement() {
                 className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 <Filter size={20} />
-                Filters
+                Bộ lọc
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                Search
+                Tìm kiếm
               </button>
               <button
                 type="button"
@@ -780,7 +776,7 @@ export default function ToursManagement() {
                   onChange={(e) => handleFilterChange('destinationId', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">All Destinations</option>
+                  <option value="">Tất cả điểm đến</option>
                   {destinations.map(dest => (
                     <option key={`filter-dest-${dest.Id || dest.id}`} value={dest.Id || dest.id}>
                       {dest.Name || dest.name}
@@ -793,9 +789,9 @@ export default function ToursManagement() {
                   onChange={(e) => handleFilterChange('type', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">All Types</option>
+                  <option value="">Tất cả loại</option>
                   {Object.entries(TourType).map(([key, value]) => (
-                    <option key={`filter-type-${value}`} value={value}>{key}</option>
+                    <option key={`filter-type-${value}`} value={value}>{getTypeLabel(value)}</option>
                   ))}
                 </select>
 
@@ -804,9 +800,9 @@ export default function ToursManagement() {
                   onChange={(e) => handleFilterChange('category', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">All Categories</option>
+                  <option value="">Tất cả danh mục</option>
                   {Object.entries(TourCategory).map(([key, value]) => (
-                    <option key={`filter-cat-${value}`} value={value}>{key}</option>
+                    <option key={`filter-cat-${value}`} value={value}>{getCategoryLabel(value)}</option>
                   ))}
                 </select>
 
@@ -815,15 +811,15 @@ export default function ToursManagement() {
                   onChange={(e) => handleFilterChange('status', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">All Status</option>
+                  <option value="">Tất cả trạng thái</option>
                   {Object.entries(TourStatus).map(([key, value]) => (
-                    <option key={`filter-status-${value}`} value={value}>{key}</option>
+                    <option key={`filter-status-${value}`} value={value}>{getStatusBadge(value).label}</option>
                   ))}
                 </select>
 
                 <input
                   type="number"
-                  placeholder="Min Price"
+                  placeholder="Giá tối thiểu"
                   value={filters.minPrice}
                   onChange={(e) => handleFilterChange('minPrice', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -831,7 +827,7 @@ export default function ToursManagement() {
 
                 <input
                   type="number"
-                  placeholder="Max Price"
+                  placeholder="Giá tối đa"
                   value={filters.maxPrice}
                   onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -839,7 +835,7 @@ export default function ToursManagement() {
 
                 <input
                   type="number"
-                  placeholder="Min Days"
+                  placeholder="Số ngày tối thiểu"
                   value={filters.minDays}
                   onChange={(e) => handleFilterChange('minDays', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -847,7 +843,7 @@ export default function ToursManagement() {
 
                 <input
                   type="number"
-                  placeholder="Max Days"
+                  placeholder="Số ngày tối đa"
                   value={filters.maxDays}
                   onChange={(e) => handleFilterChange('maxDays', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -862,24 +858,24 @@ export default function ToursManagement() {
           <div className="flex justify-center items-center h-64">
             <div className="text-center">
               <Loader className="animate-spin text-blue-600 mx-auto mb-4" size={40} />
-              <p className="text-gray-600">Loading tours...</p>
+              <p className="text-gray-600">Đang tải tour...</p>
             </div>
           </div>
         ) : tours.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
             <Mountain className="mx-auto text-gray-400 mb-4" size={64} />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No tours found</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Không tìm thấy tour</h3>
             <p className="text-gray-600 mb-4">
               {searchTerm || Object.values(filters).some(v => v !== '')
-                ? 'Try adjusting your search or filters'
-                : 'Start by creating your first tour'}
+                ? 'Thử điều chỉnh tìm kiếm hoặc bộ lọc của bạn'
+                : 'Bắt đầu bằng cách tạo tour đầu tiên'}
             </p>
             <button
               onClick={() => openModal('create')}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
               <Plus size={20} />
-              Add New Tour
+              Thêm Tour Mới
             </button>
           </div>
         ) : (
@@ -943,7 +939,7 @@ export default function ToursManagement() {
                     {t.isFeatured && (
                       <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
                         <Award size={12} />
-                        Featured
+                        Nổi bật
                       </div>
                     )}
                     <div className="absolute top-2 left-2">
@@ -965,11 +961,11 @@ export default function ToursManagement() {
                     <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                       <div className="flex items-center gap-1">
                         <Clock size={16} />
-                        <span>{t.durationDays} days</span>
+                        <span>{t.durationDays} ngày</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Users size={16} />
-                        <span>{t.maxGuests} guests</span>
+                        <span>{t.maxGuests} khách</span>
                       </div>
                     </div>
 
@@ -1006,14 +1002,14 @@ export default function ToursManagement() {
                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
                       >
                         <Eye size={16} />
-                        View
+                        Xem
                       </button>
                       <button
                         onClick={() => openModal('edit', tour)}
                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
                       >
                         <Edit size={16} />
-                        Edit
+                        Sửa
                       </button>
                       <button
                         onClick={() => openModal('delete', tour)}
@@ -1029,7 +1025,7 @@ export default function ToursManagement() {
                         onClick={() => handleToggleFeatured(t.id)}
                         className="flex-1 text-xs px-2 py-1 border rounded hover:bg-gray-50"
                       >
-                        {t.isFeatured ? 'Unfeature' : 'Feature'}
+                        {t.isFeatured ? 'Bỏ nổi bật' : 'Nổi bật'}
                       </button>
                       <select
                         value={t.status}
@@ -1037,7 +1033,7 @@ export default function ToursManagement() {
                         className="flex-1 text-xs px-2 py-1 border rounded"
                       >
                         {Object.entries(TourStatus).map(([key, value]) => (
-                          <option key={`status-${t.id}-${value}`} value={value}>{key}</option>
+                          <option key={`status-${t.id}-${value}`} value={value}>{getStatusBadge(value).label}</option>
                         ))}
                       </select>
                     </div>
@@ -1056,17 +1052,17 @@ export default function ToursManagement() {
               disabled={currentPage === 1}
               className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Previous
+              Trước
             </button>
             <span className="text-gray-600">
-              Page {currentPage} of {totalPages}
+              Trang {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
               className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Next
+              Sau
             </button>
           </div>
         )}
@@ -1078,9 +1074,9 @@ export default function ToursManagement() {
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
               <h2 className="text-xl font-bold">
-                {modalMode === 'create' && 'Create New Tour'}
-                {modalMode === 'edit' && 'Edit Tour'}
-                {modalMode === 'delete' && 'Delete Tour'}
+                {modalMode === 'create' && 'Tạo Tour Mới'}
+                {modalMode === 'edit' && 'Chỉnh Sửa Tour'}
+                {modalMode === 'delete' && 'Xóa Tour'}
               </h2>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
@@ -1093,26 +1089,26 @@ export default function ToursManagement() {
                   <div className="flex items-center gap-3 text-red-600 mb-4">
                     <AlertCircle size={48} />
                     <div>
-                      <h3 className="text-lg font-semibold">Are you sure?</h3>
-                      <p className="text-gray-600">This action cannot be undone.</p>
+                      <h3 className="text-lg font-semibold">Bạn có chắc chắn?</h3>
+                      <p className="text-gray-600">Hành động này không thể hoàn tác.</p>
                     </div>
                   </div>
                   <p className="mb-6">
-                    You are about to delete <strong>{selectedTour?.Name || selectedTour?.name}</strong>
+                    Bạn sắp xóa <strong>{selectedTour?.Name || selectedTour?.name}</strong>
                   </p>
                   <div className="flex gap-3 justify-end">
                     <button
                       onClick={closeModal}
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                     >
-                      Cancel
+                      Hủy
                     </button>
                     <button
                       onClick={handleDelete}
                       disabled={loading}
                       className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                     >
-                      {loading ? 'Deleting...' : 'Delete Tour'}
+                      {loading ? 'Đang xóa...' : 'Xóa Tour'}
                     </button>
                   </div>
                 </div>
@@ -1120,11 +1116,11 @@ export default function ToursManagement() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {/* Basic Information */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Basic Information</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Thông Tin Cơ Bản</h3>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tour Name <span className="text-red-500">*</span>
+                        Tên Tour <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -1137,7 +1133,7 @@ export default function ToursManagement() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Description <span className="text-red-500">*</span>
+                        Mô Tả <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         value={formData.description}
@@ -1151,14 +1147,14 @@ export default function ToursManagement() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Destination <span className="text-red-500">*</span>
+                          Điểm Đến <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={formData.destinationId}
                           onChange={(e) => setFormData({ ...formData, destinationId: e.target.value })}
                           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.destinationId ? 'border-red-500' : 'border-gray-300'}`}
                         >
-                          <option value="">Select Destination</option>
+                          <option value="">Chọn điểm đến</option>
                           {destinations.map(dest => (
                             <option key={`form-dest-${dest.Id || dest.id}`} value={dest.Id || dest.id}>
                               {dest.Name || dest.name}
@@ -1170,7 +1166,7 @@ export default function ToursManagement() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Location <span className="text-red-500">*</span>
+                          Địa Điểm <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
@@ -1185,7 +1181,7 @@ export default function ToursManagement() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Price ($) <span className="text-red-500">*</span>
+                          Giá ($) <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="number"
@@ -1200,7 +1196,7 @@ export default function ToursManagement() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Max Guests <span className="text-red-500">*</span>
+                          Số Khách Tối Đa <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="number"
@@ -1216,11 +1212,11 @@ export default function ToursManagement() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Duration <span className="text-red-500">*</span>
+                          Thời Lượng <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
-                          placeholder="e.g., 3 days 2 nights"
+                          placeholder="VD: 3 ngày 2 đêm"
                           value={formData.duration}
                           onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.duration ? 'border-red-500' : 'border-gray-300'}`}
@@ -1230,7 +1226,7 @@ export default function ToursManagement() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Duration Days <span className="text-red-500">*</span>
+                          Số Ngày <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="number"
@@ -1246,7 +1242,7 @@ export default function ToursManagement() {
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Type <span className="text-red-500">*</span>
+                          Loại <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={formData.type}
@@ -1254,14 +1250,14 @@ export default function ToursManagement() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
                           {Object.entries(TourType).map(([key, value]) => (
-                            <option key={`form-type-${value}`} value={value}>{key}</option>
+                            <option key={`form-type-${value}`} value={value}>{getTypeLabel(value)}</option>
                           ))}
                         </select>
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Category <span className="text-red-500">*</span>
+                          Danh Mục <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={formData.category}
@@ -1269,23 +1265,23 @@ export default function ToursManagement() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
                           {Object.entries(TourCategory).map(([key, value]) => (
-                            <option key={`form-cat-${value}`} value={value}>{key}</option>
+                            <option key={`form-cat-${value}`} value={value}>{getCategoryLabel(value)}</option>
                           ))}
                         </select>
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Difficulty {[1, 14].includes(formData.type) && <span className="text-red-500">*</span>}
+                          Độ Khó {[1, 14].includes(formData.type) && <span className="text-red-500">*</span>}
                         </label>
                         <select
                           value={formData.difficulty === null ? '' : formData.difficulty}
                           onChange={(e) => setFormData({ ...formData, difficulty: e.target.value === '' ? null : parseInt(e.target.value) })}
                           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.difficulty ? 'border-red-500' : 'border-gray-300'}`}
                         >
-                          <option value="">None</option>
+                          <option value="">Không có</option>
                           {Object.entries(TourDifficulty).map(([key, value]) => (
-                            <option key={`form-diff-${value}`} value={value}>{key}</option>
+                            <option key={`form-diff-${value}`} value={value}>{getDifficultyLabel(value)}</option>
                           ))}
                         </select>
                         {errors.difficulty && <p className="text-red-500 text-xs mt-1">{errors.difficulty}</p>}
@@ -1295,7 +1291,7 @@ export default function ToursManagement() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Status <span className="text-red-500">*</span>
+                          Trạng Thái <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={formData.status}
@@ -1303,7 +1299,7 @@ export default function ToursManagement() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
                           {Object.entries(TourStatus).map(([key, value]) => (
-                            <option key={`form-status-${value}`} value={value}>{key}</option>
+                            <option key={`form-status-${value}`} value={value}>{getStatusBadge(value).label}</option>
                           ))}
                         </select>
                       </div>
@@ -1316,36 +1312,35 @@ export default function ToursManagement() {
                             onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
                             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                           />
-                          <span className="text-sm font-medium text-gray-700">Featured Tour</span>
+                          <span className="text-sm font-medium text-gray-700">Tour Nổi Bật</span>
                         </label>
                       </div>
                     </div>
                   </div>
-
-                  {/* Images Section */}
+                  {/* Phần Hình Ảnh */}
                   <div className="border-t pt-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold text-gray-900">Images</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">Hình ảnh</h3>
                       <button
                         type="button"
                         onClick={handleAddImage}
                         className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
                       >
                         <Plus size={16} />
-                        Add Image
+                        Thêm hình ảnh
                       </button>
                     </div>
 
                     {formData.images.length === 0 ? (
                       <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                         <ImageIcon className="mx-auto text-gray-400 mb-2" size={40} />
-                        <p className="text-sm text-gray-500">No images added yet</p>
+                        <p className="text-sm text-gray-500">Chưa có hình ảnh nào được thêm</p>
                         <button
                           type="button"
                           onClick={handleAddImage}
                           className="mt-2 text-sm text-blue-600 hover:text-blue-700"
                         >
-                          Add your first image
+                          Thêm hình đầu tiên
                         </button>
                       </div>
                     ) : (
@@ -1357,7 +1352,7 @@ export default function ToursManagement() {
                                 <div className="relative h-24 bg-gray-200 rounded overflow-hidden">
                                   <img
                                     src={image.imageUrl}
-                                    alt={`Preview ${index + 1}`}
+                                    alt={`Xem trước ${index + 1}`}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
                                       e.target.style.display = 'none';
@@ -1373,14 +1368,14 @@ export default function ToursManagement() {
 
                               <input
                                 type="text"
-                                placeholder="Image URL *"
+                                placeholder="Đường dẫn hình ảnh *"
                                 value={image.imageUrl}
                                 onChange={(e) => handleImageChange(index, 'imageUrl', e.target.value)}
                                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                               />
                               <input
                                 type="text"
-                                placeholder="Caption (optional)"
+                                placeholder="Chú thích (không bắt buộc)"
                                 value={image.caption}
                                 onChange={(e) => handleImageChange(index, 'caption', e.target.value)}
                                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1392,7 +1387,7 @@ export default function ToursManagement() {
                                   onChange={(e) => handleImageChange(index, 'isPrimary', e.target.checked)}
                                   className="w-4 h-4 text-blue-600 border-gray-300 rounded"
                                 />
-                                <span className="text-sm text-gray-700 font-medium">Primary Image</span>
+                                <span className="text-sm text-gray-700 font-medium">Hình ảnh chính</span>
                               </label>
                             </div>
                             <button
@@ -1408,23 +1403,23 @@ export default function ToursManagement() {
                     )}
                   </div>
 
-                  {/* Includes Section */}
+                  {/* Phần Bao Gồm */}
                   <div className="border-t pt-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold text-gray-900">What's Included</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">Bao gồm</h3>
                       <button
                         type="button"
                         onClick={handleAddInclude}
                         className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
                       >
                         <Plus size={16} />
-                        Add Item
+                        Thêm mục
                       </button>
                     </div>
 
                     {formData.includes.length === 0 ? (
                       <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
-                        No items added yet
+                        Chưa có mục nào được thêm
                       </p>
                     ) : (
                       <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -1432,7 +1427,7 @@ export default function ToursManagement() {
                           <div key={index} className="flex gap-2">
                             <input
                               type="text"
-                              placeholder="e.g., Hotel accommodation, Meals, Transportation"
+                              placeholder="Ví dụ: Khách sạn, bữa ăn, phương tiện di chuyển"
                               value={item}
                               onChange={(e) => handleIncludeChange(index, e.target.value)}
                               className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1450,23 +1445,23 @@ export default function ToursManagement() {
                     )}
                   </div>
 
-                  {/* Excludes Section */}
+                  {/* Phần Không Bao Gồm */}
                   <div className="border-t pt-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold text-gray-900">What's Not Included</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">Không bao gồm</h3>
                       <button
                         type="button"
                         onClick={handleAddExclude}
                         className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
                       >
                         <Plus size={16} />
-                        Add Item
+                        Thêm mục
                       </button>
                     </div>
 
                     {formData.excludes.length === 0 ? (
                       <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
-                        No items added yet
+                        Chưa có mục nào được thêm
                       </p>
                     ) : (
                       <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -1474,7 +1469,7 @@ export default function ToursManagement() {
                           <div key={index} className="flex gap-2">
                             <input
                               type="text"
-                              placeholder="e.g., Personal expenses, Travel insurance, Tips"
+                              placeholder="Ví dụ: Chi phí cá nhân, bảo hiểm du lịch, tiền tip"
                               value={item}
                               onChange={(e) => handleExcludeChange(index, e.target.value)}
                               className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1492,13 +1487,13 @@ export default function ToursManagement() {
                     )}
                   </div>
 
-                  {/* Tags Section */}
+                  {/* Thẻ (Tags) */}
                   <div className="border-t pt-4 space-y-3">
-                    <h3 className="text-lg font-semibold text-gray-900">Tags</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Thẻ (Tags)</h3>
 
                     {tags.length === 0 ? (
                       <p className="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
-                        No tags available. Please create tags first.
+                        Chưa có thẻ nào. Vui lòng tạo thẻ trước.
                       </p>
                     ) : (
                       <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -1513,8 +1508,8 @@ export default function ToursManagement() {
                               type="button"
                               onClick={() => handleToggleTag(tagId)}
                               className={`px-3 py-1.5 text-sm rounded-full transition-all ${isSelected
-                                  ? 'bg-blue-600 text-white shadow-sm'
-                                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
                                 }`}
                             >
                               {tagName}
@@ -1524,43 +1519,29 @@ export default function ToursManagement() {
                       </div>
                     )}
                     <p className="text-xs text-gray-500">
-                      {formData.tagIds.length} tag{formData.tagIds.length !== 1 ? 's' : ''} selected
+                      Đã chọn {formData.tagIds.length} thẻ
                     </p>
                   </div>
 
-                  {/* ========== GUIDES SECTION - ĐÃ THÊM HOÀN CHỈNH ========== */}
+                  {/* Hướng Dẫn Viên */}
                   <div className="border-t pt-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Tour Guides</h3>
-                        <p className="text-sm text-gray-600">
-                          Select guides who can lead this tour
-                        </p>
+                        <h3 className="text-lg font-semibold text-gray-900">Hướng dẫn viên</h3>
+                        <p className="text-sm text-gray-600">Chọn hướng dẫn viên cho tour này</p>
                       </div>
                       {formData.guideIds.length > 0 && (
                         <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-                          {formData.guideIds.length} guide{formData.guideIds.length !== 1 ? 's' : ''} selected
+                          Đã chọn {formData.guideIds.length} hướng dẫn viên
                         </span>
                       )}
                     </div>
-
+                    {/* Component chọn hướng dẫn viên */}
                     <GuideSelector
                       selectedGuideIds={formData.guideIds}
                       defaultGuideId={formData.defaultGuideId}
-                      onGuidesChange={(newGuideIds) => {
-                        console.log('Guide IDs changed:', newGuideIds);
-                        setFormData(prev => ({
-                          ...prev,
-                          guideIds: newGuideIds
-                        }));
-                      }}
-                      onDefaultGuideChange={(newDefaultId) => {
-                        console.log('Default guide changed:', newDefaultId);
-                        setFormData(prev => ({
-                          ...prev,
-                          defaultGuideId: newDefaultId
-                        }));
-                      }}
+                      onGuidesChange={(newGuideIds) => setFormData(prev => ({ ...prev, guideIds: newGuideIds }))}
+                      onDefaultGuideChange={(newDefaultId) => setFormData(prev => ({ ...prev, defaultGuideId: newDefaultId }))}
                     />
 
                     {errors.guideIds && (
@@ -1570,21 +1551,20 @@ export default function ToursManagement() {
                       </p>
                     )}
                   </div>
-                  {/* ========== END GUIDES SECTION ========== */}
 
-                  {/* Additional Requirements */}
+                  {/* Thông Tin Bổ Sung */}
                   <div className="border-t pt-4 space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Thông tin bổ sung</h3>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Minimum Age
+                          Độ tuổi tối thiểu
                         </label>
                         <input
                           type="number"
                           min="0"
-                          placeholder="e.g., 12"
+                          placeholder="Ví dụ: 12"
                           value={formData.minAge}
                           onChange={(e) => setFormData({ ...formData, minAge: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1593,12 +1573,12 @@ export default function ToursManagement() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Maximum Age
+                          Độ tuổi tối đa
                         </label>
                         <input
                           type="number"
                           min="0"
-                          placeholder="e.g., 65"
+                          placeholder="Ví dụ: 65"
                           value={formData.maxAge}
                           onChange={(e) => setFormData({ ...formData, maxAge: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1608,76 +1588,76 @@ export default function ToursManagement() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Physical Requirements
+                        Yêu cầu thể lực
                       </label>
                       <textarea
                         value={formData.physicalRequirements}
                         onChange={(e) => setFormData({ ...formData, physicalRequirements: e.target.value })}
                         rows={3}
-                        placeholder="Describe any physical fitness requirements..."
+                        placeholder="Mô tả yêu cầu thể lực nếu có..."
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Special Requirements
+                        Yêu cầu đặc biệt
                       </label>
                       <textarea
                         value={formData.specialRequirements}
                         onChange={(e) => setFormData({ ...formData, specialRequirements: e.target.value })}
                         rows={3}
-                        placeholder="Any special requirements or equipment needed..."
+                        placeholder="Các yêu cầu đặc biệt hoặc thiết bị cần chuẩn bị..."
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
 
-                  {/* SEO Section */}
+                  {/* SEO */}
                   <div className="border-t pt-4 space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">SEO Information (Optional)</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Thông tin SEO (tuỳ chọn)</h3>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Meta Title
+                        Tiêu đề Meta
                       </label>
                       <input
                         type="text"
                         value={formData.metaTitle}
                         onChange={(e) => setFormData({ ...formData, metaTitle: e.target.value })}
-                        placeholder="Leave empty to auto-generate from tour name"
+                        placeholder="Để trống nếu muốn tự động tạo từ tên tour"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        {formData.metaTitle.length}/60 characters
+                        {formData.metaTitle.length}/60 ký tự
                       </p>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Meta Description
+                        Mô tả Meta
                       </label>
                       <textarea
                         value={formData.metaDescription}
                         onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
                         rows={3}
-                        placeholder="Leave empty to auto-generate from tour description"
+                        placeholder="Để trống nếu muốn tự động tạo từ mô tả tour"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        {formData.metaDescription.length}/160 characters
+                        {formData.metaDescription.length}/160 ký tự
                       </p>
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* Nút Hành Động */}
                   <div className="flex gap-3 justify-end pt-6 border-t sticky bottom-0 bg-white">
                     <button
                       type="button"
                       onClick={closeModal}
                       className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
                     >
-                      Cancel
+                      Hủy
                     </button>
                     <button
                       type="submit"
@@ -1687,12 +1667,12 @@ export default function ToursManagement() {
                       {loading ? (
                         <>
                           <Loader className="animate-spin" size={18} />
-                          Saving...
+                          Đang lưu...
                         </>
                       ) : (
                         <>
                           <CheckCircle size={18} />
-                          {modalMode === 'create' ? 'Create Tour' : 'Update Tour'}
+                          {modalMode === 'create' ? 'Tạo tour' : 'Cập nhật tour'}
                         </>
                       )}
                     </button>
