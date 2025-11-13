@@ -59,7 +59,6 @@ const BookingHistoryPage = () => {
         bookingData = response.data || response.Data || [];
       }
       
-      // Map API response to component structure
       const mappedBookings = bookingData.map(booking => ({
         id: booking.id || booking.Id,
         bookingCode: booking.bookingCode || booking.BookingCode,
@@ -78,7 +77,6 @@ const BookingHistoryPage = () => {
         paymentTransactionId: booking.paymentTransactionId || booking.PaymentTransactionId,
         paymentDate: booking.paymentDate || booking.PaymentDate,
         
-        // ✅ THÊM THÔNG TIN GUIDE
         guide: {
           id: booking.guideId || booking.GuideId,
           name: booking.guideName || booking.GuideName || 'Chưa gán',
@@ -435,7 +433,7 @@ const BookingHistoryPage = () => {
                         </div>
                       </div>
 
-                      {/* ========== GUIDE INFORMATION - ENHANCED ========== */}
+                      {}
                       <div className="mb-4 pb-4 border-b border-gray-200">
                         <p className="text-sm text-gray-500 mb-3">Hướng dẫn viên</p>
                         
@@ -502,7 +500,7 @@ const BookingHistoryPage = () => {
                           </div>
                         )}
                       </div>
-                      {/* ========== END GUIDE INFORMATION ========== */}
+                      {}
 
                       {/* Payment & Total */}
                       <div className="flex items-center justify-between mb-4 flex-wrap gap-4">

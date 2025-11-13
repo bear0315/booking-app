@@ -1,7 +1,6 @@
 import { apiRequest } from './api';
 
 export const bookingService = {
-  // Get all bookings (Admin only)
   getAllBookings: async (page = 1, pageSize = 10, status = null) => {
     let url = `/Bookings?page=${page}&pageSize=${pageSize}`;
     if (status) {
@@ -10,39 +9,32 @@ export const bookingService = {
     return await apiRequest(url);
   },
 
-  // Get booking by ID
   getBookingById: async (id) => {
     return await apiRequest(`/Bookings/${id}`);
   },
 
-  // Get booking by booking code
   getBookingByCode: async (bookingCode) => {
     return await apiRequest(`/Bookings/code/${bookingCode}`);
   },
 
-  // Get current user's bookings
   getMyBookings: async (page = 1, pageSize = 10) => {
     return await apiRequest(`/Bookings/my-bookings?page=${page}&pageSize=${pageSize}`);
   },
 
-  // Get bookings by tour ID
   getBookingsByTour: async (tourId, page = 1, pageSize = 10) => {
     return await apiRequest(`/Bookings/tour/${tourId}?page=${page}&pageSize=${pageSize}`);
   },
 
-  // Get bookings by guide ID
   getBookingsByGuide: async (guideId, page = 1, pageSize = 10) => {
     return await apiRequest(`/Bookings/guide/${guideId}?page=${page}&pageSize=${pageSize}`);
   },
 
-  // Get available guides for booking
   getAvailableGuides: async (tourId, tourDate) => {
     return await apiRequest(
       `/Bookings/available-guides?tourId=${tourId}&tourDate=${tourDate}`
     );
   },
 
-  // ✅ NEW: Assign guide to booking (Admin/Manager)
   assignGuideToBooking: async (bookingId, guideId, reason = null) => {
     return await apiRequest(`/Bookings/${bookingId}/assign-guide`, {
       method: 'PATCH',
@@ -53,7 +45,6 @@ export const bookingService = {
     });
   },
 
-  // ✅ NEW: Remove guide from booking (Admin/Manager)
   removeGuideFromBooking: async (bookingId) => {
     return await apiRequest(`/Bookings/${bookingId}/guide`, {
       method: 'DELETE',
