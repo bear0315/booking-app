@@ -1,138 +1,137 @@
-// API Base Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7195/api';
+// API Configuration
+const API_BASE_URL = 'https://localhost:7195/api';
 
-// Helper function to get auth token
-const getAuthToken = () => {
-  return localStorage.getItem('accessToken');
+// Get auth token from localStorage
+export const getAuthToken = () => {
+  return localStorage.getItem('token');
 };
 
-// Helper function to get refresh token
-const getRefreshToken = () => {
-  return localStorage.getItem('refreshToken');
-};
-
-// Helper function to set tokens
-const setTokens = (accessToken, refreshToken) => {
-  localStorage.setItem('accessToken', accessToken);
+// Set tokens
+export const setTokens = (accessToken, refreshToken = null) => {
+  localStorage.setItem('token', accessToken);
   if (refreshToken) {
     localStorage.setItem('refreshToken', refreshToken);
   }
 };
 
-// Helper function to clear tokens
-const clearTokens = () => {
-  localStorage.removeItem('accessToken');
+// Clear tokens
+export const clearTokens = () => {
+  localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
 };
 
-// Base fetch function with error handling
-const apiRequest = async (endpoint, options = {}) => {
+// Main API request function
+export const apiRequest = async (endpoint, options = {}) => {
+  const url = `${API_BASE_URL}${endpoint}`;
   const token = getAuthToken();
-  
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  // Add Authorization header if token exists
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const config = {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
+    headers,
   };
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    
-    // Handle 401 Unauthorized - token expired
-    if (response.status === 401) {
-      const refreshToken = getRefreshToken();
-      if (refreshToken) {
-        try {
-          const refreshResponse = await fetch(`${API_BASE_URL}/Auth/refresh-token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-          });
+    const response = await fetch(url, config);
 
-          if (refreshResponse.ok) {
-            const refreshData = await refreshResponse.json();
-            if (refreshData.success && refreshData.accessToken) {
-              setTokens(refreshData.accessToken, refreshData.refreshToken);
-              // Retry original request with new token
-              config.headers.Authorization = `Bearer ${refreshData.accessToken}`;
-              const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, config);
-              return await handleResponse(retryResponse);
-            }
-          }
-        } catch (error) {
-          console.error('Token refresh failed:', error);
-          clearTokens();
-          window.location.href = '/login';
-          throw new Error('Session expired. Please login again.');
-        }
-      } else {
-        clearTokens();
+    // Handle 401 Unauthorized - token expired or invalid
+    if (response.status === 401) {
+      clearTokens();
+      
+      // Don't redirect on login endpoint
+      if (!endpoint.includes('/Auth/login')) {
         window.location.href = '/login';
-        throw new Error('Unauthorized. Please login.');
       }
+      
+      throw new Error('Unauthorized - Please login again');
     }
 
-    return await handleResponse(response);
+    // Handle 403 Forbidden - insufficient permissions
+    if (response.status === 403) {
+      throw new Error('Access denied - Insufficient permissions');
+    }
+
+    // Parse response
+    const contentType = response.headers.get('content-type');
+    let data;
+
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      data = await response.text();
+    }
+
+    // Handle error responses
+    if (!response.ok) {
+      const errorMessage = 
+        data?.message || 
+        data?.Message || 
+        data?.error || 
+        data?.Error ||
+        `HTTP error! status: ${response.status}`;
+      
+      throw new Error(errorMessage);
+    }
+
+    return data;
   } catch (error) {
     console.error('API Request Error:', error);
     throw error;
   }
 };
 
-// Handle response
-const handleResponse = async (response) => {
-  const contentType = response.headers.get('content-type');
+// Helper function to check if user is authenticated
+export const isAuthenticated = () => {
+  const token = getAuthToken();
+  const user = localStorage.getItem('user');
+  return !!(token && user);
+};
+
+// Helper function to get current user
+export const getCurrentUser = () => {
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return null;
   
-  if (contentType && contentType.includes('application/json')) {
-    const data = await response.json();
-    
-    if (!response.ok) {
-      const errorMessage = data.message || data.Message || 'An error occurred';
-      const error = new Error(errorMessage);
-      error.status = response.status;
-      error.data = data;
-      throw error;
-    }
-    
-    // Normalize response to handle both PascalCase and camelCase
-    // This ensures compatibility with different API response formats
-    if (data.Success !== undefined || data.success !== undefined) {
-      return {
-        ...data,
-        success: data.success !== undefined ? data.success : data.Success,
-        Success: data.Success !== undefined ? data.Success : data.success,
-        message: data.message || data.Message || '',
-        Message: data.Message || data.message || '',
-        user: data.user || data.User,
-        User: data.User || data.user,
-        accessToken: data.accessToken || data.AccessToken,
-        AccessToken: data.AccessToken || data.accessToken,
-        refreshToken: data.refreshToken || data.RefreshToken,
-        RefreshToken: data.RefreshToken || data.refreshToken
-      };
-    }
-    
-    return data;
-  } else {
-    // Handle non-JSON responses (like redirects)
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response;
+  try {
+    return JSON.parse(userStr);
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    return null;
   }
 };
 
-// Export utilities
-export {
-  API_BASE_URL,
-  getAuthToken,
-  getRefreshToken,
-  setTokens,
-  clearTokens,
-  apiRequest,
+// Helper function to check user role
+export const hasRole = (requiredRole) => {
+  const user = getCurrentUser();
+  if (!user) return false;
+  
+  const userRole = user.role || user.Role;
+  
+  // Handle both string and number roles
+  if (typeof requiredRole === 'string') {
+    return userRole === requiredRole;
+  }
+  
+  return userRole === requiredRole;
 };
 
+// Helper function to check multiple roles
+export const hasAnyRole = (roles = []) => {
+  const user = getCurrentUser();
+  if (!user) return false;
+  
+  const userRole = user.role || user.Role;
+  return roles.includes(userRole);
+};
+
+export default apiRequest;
