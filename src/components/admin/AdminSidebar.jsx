@@ -9,13 +9,17 @@ import {
   Users as UsersIcon,
   Settings
 } from 'lucide-react';
-
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  };
 const AdminSidebar = ({
   activePage,
   setActivePage,
   isSidebarOpen,
   setIsSidebarOpen,
-  handleLogout, 
+   
   isScrolled = false, 
 }) => {
   const menuItems = [
